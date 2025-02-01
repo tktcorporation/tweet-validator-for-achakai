@@ -98,24 +98,24 @@ function App() {
         
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Tweet Text
+            ツイートテキスト
           </label>
           <textarea
             value={tweetText}
             onChange={(e) => setTweetText(e.target.value)}
             className="w-full h-48 p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="Enter your tweet here..."
+            placeholder="ここにツイートを入力してください..."
           />
         </div>
 
         <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold mb-4">Validation Results</h2>
+          <h2 className="text-xl font-semibold mb-4">検証結果</h2>
           
           <div className="space-y-4">
             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
               <div className="flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-gray-600" />
-                <span>Date is Sunday</span>
+                <span>日曜日の日付</span>
               </div>
               {validation.isSunday ? 
                 <CheckCircle className="w-5 h-5 text-green-500" /> : 
@@ -126,7 +126,7 @@ function App() {
             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
               <div className="flex items-center gap-2">
                 <Clock className="w-5 h-5 text-gray-600" />
-                <span>Has Time</span>
+                <span>時間が含まれている</span>
               </div>
               {validation.hasTime ? 
                 <CheckCircle className="w-5 h-5 text-green-500" /> : 
@@ -137,7 +137,7 @@ function App() {
             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
               <div className="flex items-center gap-2">
                 <MapPin className="w-5 h-5 text-gray-600" />
-                <span>Has Valid Location Format</span>
+                <span>有効な場所形式が含まれている</span>
               </div>
               {validation.hasValidLocation ? 
                 <CheckCircle className="w-5 h-5 text-green-500" /> : 
@@ -148,7 +148,7 @@ function App() {
             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
               <div className="flex items-center gap-2">
                 <Hash className="w-5 h-5 text-gray-600" />
-                <span>Has #あ茶会 hashtag</span>
+                <span>#あ茶会 ハッシュタグが含まれている</span>
               </div>
               {validation.hasHashtag ? 
                 <CheckCircle className="w-5 h-5 text-green-500" /> : 
@@ -159,14 +159,14 @@ function App() {
             <div className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
               <div className="flex items-center gap-2">
                 <span className="w-5 h-5 flex items-center justify-center font-bold text-gray-600">#</span>
-                <span>Meeting Number</span>
+                <span>開催回数</span>
               </div>
               {validation.isCorrectMeeting ? 
                 <CheckCircle className="w-5 h-5 text-green-500" /> : 
                 <div className="text-red-500 text-sm">
                   {validation.meetingNumber ? 
-                    `Should be #${validation.expectedMeetingNumber}` : 
-                    'Missing meeting number'}
+                    `#${validation.expectedMeetingNumber}であるべきです` : 
+                    '開催回数が欠落しています'}
                 </div>
               }
             </div>
@@ -174,26 +174,26 @@ function App() {
 
           {validation.isValid && (
             <div className="mt-6 p-4 bg-gray-50 rounded-md">
-              <h3 className="font-semibold mb-2">Extracted Information:</h3>
+              <h3 className="font-semibold mb-2">抽出された情報:</h3>
               <dl className="space-y-2">
                 <div className="flex gap-2">
-                  <dt className="font-medium">Meeting:</dt>
+                  <dt className="font-medium">会議:</dt>
                   <dd>{validation.extractedInfo.meetingNumber}</dd>
                 </div>
                 <div className="flex gap-2">
-                  <dt className="font-medium">Date:</dt>
+                  <dt className="font-medium">日付:</dt>
                   <dd>{validation.extractedInfo.date}</dd>
                 </div>
                 <div className="flex gap-2">
-                  <dt className="font-medium">Time:</dt>
+                  <dt className="font-medium">時間:</dt>
                   <dd>{validation.extractedInfo.time}</dd>
                 </div>
                 <div className="flex gap-2">
-                  <dt className="font-medium">World:</dt>
+                  <dt className="font-medium">ワールド:</dt>
                   <dd>{validation.extractedInfo.worldName}</dd>
                 </div>
                 <div className="flex gap-2">
-                  <dt className="font-medium">Creator:</dt>
+                  <dt className="font-medium">クリエイター:</dt>
                   <dd>{validation.extractedInfo.creator}</dd>
                 </div>
               </dl>
@@ -202,9 +202,9 @@ function App() {
 
           <div className="mt-6 p-4 rounded-md text-center font-medium">
             {validation.isValid ? (
-              <div className="text-green-600">✨ Tweet is valid! ✨</div>
+              <div className="text-green-600">✨ ツイートは有効です！ ✨</div>
             ) : (
-              <div className="text-red-600">Tweet needs adjustment</div>
+              <div className="text-red-600">ツイートに調整が必要です</div>
             )}
           </div>
         </div>
