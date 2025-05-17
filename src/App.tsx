@@ -24,8 +24,10 @@ function App() {
     // Check hashtag
     const hasHashtag = text.includes('#あ茶会');
 
-    // Extract location with world name and creator
-    const locationRegex = /【場所】([^B]+)\s*By\s*(.+?)(?:\s*$|\n)/i;
+    // Extract location with world name and creator. The world name may include
+    // the letter "B", so capture everything up to a line break instead of
+    // excluding that character.
+    const locationRegex = /【場所】([^\n]+)\s*By\s*(.+?)(?:\s*$|\n)/i;
     const locationMatch = text.match(locationRegex);
     const hasValidLocation = locationMatch !== null;
 
