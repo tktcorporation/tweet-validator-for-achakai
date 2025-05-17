@@ -3,6 +3,11 @@ import { Calendar, Hash, CheckCircle, XCircle, Clock, MapPin } from 'lucide-reac
 
 function App() {
   const [tweetText, setTweetText] = useState('');
+  const [apiToken, setApiToken] = useState('');
+  const [worldInfo, setWorldInfo] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [generatedText, setGeneratedText] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // Reference point: Meeting #208 on 2025-02-02
   const referenceDate = new Date('2025-02-02');
@@ -30,6 +35,58 @@ function App() {
       `【場所】ワールド名 By クリエイター名\n` +
       '#あ茶会';
     setTweetText(template);
+  };
+
+  const fileToDataURL = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const generateText = async () => {
+    if (!apiToken || !worldInfo || !imageFile) {
+      return;
+    }
+    setIsGenerating(true);
+    try {
+      const dataUrl = await fileToDataURL(imageFile);
+
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiToken}`
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o',
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'text',
+                  text: `次のワールド情報を参考に文章を生成してください。\n${worldInfo}`
+                },
+                {
+                  type: 'image_url',
+                  image_url: { url: dataUrl }
+                }
+              ]
+            }
+          ]
+        })
+      });
+      const data = await res.json();
+      setGeneratedText(data.choices?.[0]?.message?.content ?? '生成に失敗しました');
+    } catch (err) {
+      console.error(err);
+      setGeneratedText('生成に失敗しました');
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const validateTweet = (text: string) => {
@@ -119,6 +176,55 @@ function App() {
         <h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">
           あ茶会 Tweet Validator
         </h1>
+
+        <div className="bg-white rounded-lg shadow-md p-6 mb-8 space-y-4">
+          <h2 className="text-xl font-semibold">AI 文章生成</h2>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              API Token
+            </label>
+            <input
+              type="password"
+              value={apiToken}
+              onChange={(e) => setApiToken(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-md"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              ワールド情報
+            </label>
+            <input
+              type="text"
+              value={worldInfo}
+              onChange={(e) => setWorldInfo(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded-md"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              画像
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setImageFile(e.target.files ? e.target.files[0] : null)}
+              className="w-full"
+            />
+          </div>
+          <button
+            onClick={generateText}
+            className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600"
+            disabled={isGenerating}
+          >
+            {isGenerating ? '生成中...' : '文章生成'}
+          </button>
+          {generatedText && (
+            <div className="p-3 bg-gray-50 rounded-md whitespace-pre-wrap">
+              {generatedText}
+            </div>
+          )}
+        </div>
         
         <div className="bg-white rounded-lg shadow-md p-6 mb-8">
           <label className="block text-sm font-medium text-gray-700 mb-2">
