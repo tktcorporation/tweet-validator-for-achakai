@@ -3,10 +3,34 @@ import { Calendar, Hash, CheckCircle, XCircle, Clock, MapPin } from 'lucide-reac
 
 function App() {
   const [tweetText, setTweetText] = useState('');
-  
+
   // Reference point: Meeting #208 on 2025-02-02
   const referenceDate = new Date('2025-02-02');
   const referenceMeetingNumber = 208;
+
+  const generateThisWeeksSchedule = () => {
+    const today = new Date();
+    const upcomingSunday = new Date(today);
+    while (upcomingSunday.getDay() !== 0) {
+      upcomingSunday.setDate(upcomingSunday.getDate() + 1);
+    }
+
+    const month = upcomingSunday.getMonth() + 1;
+    const day = upcomingSunday.getDate();
+
+    const weeksDiff = Math.round(
+      (upcomingSunday.getTime() - referenceDate.getTime()) /
+        (7 * 24 * 60 * 60 * 1000)
+    );
+    const meetingNumber = referenceMeetingNumber + weeksDiff;
+
+    const template =
+      `第${meetingNumber}回あ茶会\n` +
+      `【日程】${month}月${day}日(日) 22:00〜23:00\n` +
+      `【場所】ワールド名 By クリエイター名\n` +
+      '#あ茶会';
+    setTweetText(template);
+  };
 
   const validateTweet = (text: string) => {
     // Extract meeting number (第N回)
@@ -100,6 +124,12 @@ function App() {
           <label className="block text-sm font-medium text-gray-700 mb-2">
             ツイートテキスト
           </label>
+          <button
+            onClick={generateThisWeeksSchedule}
+            className="mb-3 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+          >
+            今週の予定を生成
+          </button>
           <textarea
             value={tweetText}
             onChange={(e) => setTweetText(e.target.value)}
