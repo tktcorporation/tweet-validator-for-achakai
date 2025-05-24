@@ -4,6 +4,9 @@ import { Calendar, Hash, CheckCircle, XCircle, Clock, MapPin } from 'lucide-reac
 function App() {
   const [tweetText, setTweetText] = useState('');
 
+  const instrumentEmojis =
+    '🎸 🎹 🥁 🎺 🎻 🎷 🪕 🪗 🎤 🎧 📯 🪘 🎼';
+
   // Reference point: Meeting #208 on 2025-02-02
   const referenceDate = new Date('2025-02-02');
   const referenceMeetingNumber = 208;
@@ -25,10 +28,11 @@ function App() {
     const meetingNumber = referenceMeetingNumber + weeksDiff;
 
     const template =
-      `第${meetingNumber}回あ茶会\n` +
-      `【日程】${month}月${day}日(日) 22:00〜23:00\n` +
+      `自由文 #あ茶会\n\n` +
+      `第${meetingNumber}回 🎸題名のないお茶会🏘️\n` +
+      `【日時】${month}月${day}日(日) 14:30〜16:00\n` +
       `【場所】ワールド名 By クリエイター名\n` +
-      '#あ茶会';
+      `【参加方法】Group＋「題名のないお茶会」にjoin`;
     setTweetText(template);
   };
 
@@ -132,6 +136,9 @@ function App() {
           >
             今週の予定を生成
           </button>
+          <div className="mb-3 text-sm">
+            楽器の絵文字候補: {instrumentEmojis}
+          </div>
           <textarea
             value={tweetText}
             onChange={(e) => setTweetText(e.target.value)}
