@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar, Hash, CheckCircle, XCircle, Clock, MapPin } from 'lucide-react';
 
 function countTweetLength(text: string): number {
@@ -15,9 +15,18 @@ function countTweetLength(text: string): number {
 
 function App() {
   const [tweetText, setTweetText] = useState('');
+  const [charCount, setCharCount] = useState(0);
+  const [animateCount, setAnimateCount] = useState(false);
 
   const instrumentEmojis =
     '🎸 🎹 🥁 🎺 🎻 🎷 🪕 🪗 🎤 🎧 📯 🪘 🎼';
+
+  useEffect(() => {
+    setCharCount(tweetText.length);
+    setAnimateCount(true);
+    const t = setTimeout(() => setAnimateCount(false), 300);
+    return () => clearTimeout(t);
+  }, [tweetText]);
 
   // Reference point: Meeting #208 on 2025-02-02
   const referenceDate = new Date('2025-02-02');
@@ -150,8 +159,9 @@ function App() {
           >
             今週の予定を生成
           </button>
-          <div className="mb-3 text-sm">
-            楽器の絵文字候補: {instrumentEmojis}
+          <div className="mb-3 text-sm flex items-center justify-between">
+            <span>楽器の絵文字候補: {instrumentEmojis}</span>
+            <span className={`font-mono ${animateCount ? 'animate-pulse' : ''}`}>文字数: {charCount}</span>
           </div>
           <textarea
             value={tweetText}
