@@ -1,6 +1,18 @@
 import React, { useState } from 'react';
 import { Calendar, Hash, CheckCircle, XCircle, Clock, MapPin } from 'lucide-react';
 
+function countTweetLength(text: string): number {
+  // Approximate Twitter's weighted character count where certain
+  // wide characters count as 2. This follows the ranges used by
+  // the Twitter Text library.
+  const wideChar = /[\u1100-\u115F\u2329\u232A\u2E80-\uA4CF\uAC00-\uD7A3\uF900-\uFAFF\uFE10-\uFE19\uFE30-\uFE6F\uFF00-\uFF60\uFFE0-\uFFE6]/u;
+  let count = 0;
+  for (const ch of [...text]) {
+    count += wideChar.test(ch) ? 2 : 1;
+  }
+  return count;
+}
+
 function App() {
   const [tweetText, setTweetText] = useState('');
 
@@ -118,6 +130,8 @@ function App() {
   };
 
   const validation = validateTweet(tweetText);
+  const tweetLength = countTweetLength(tweetText);
+  const maxTweetLength = 280;
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4">
@@ -145,6 +159,13 @@ function App() {
             className="w-full h-48 p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             placeholder="ここにツイートを入力してください..."
           />
+          <div
+            className={`mt-2 text-sm text-right ${
+              tweetLength > maxTweetLength ? 'text-red-600' : 'text-gray-600'
+            }`}
+          >
+            {tweetLength} / {maxTweetLength}
+          </div>
         </div>
 
         <div className="bg-white rounded-lg shadow-md p-6">
