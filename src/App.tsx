@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Hash, CheckCircle, XCircle, Clock, MapPin } from 'lucide-react';
+import { Calendar, Hash, CheckCircle, XCircle, Clock, MapPin, Loader2 } from 'lucide-react';
 
 function countTweetLength(text: string): number {
   // Approximate Twitter's weighted character count where certain
@@ -17,14 +17,18 @@ function App() {
   const [tweetText, setTweetText] = useState('');
   const [charCount, setCharCount] = useState(0);
   const [animateCount, setAnimateCount] = useState(false);
+  const [isLoadingSchedule, setIsLoadingSchedule] = useState(false);
+  const [showCopyFeedbackFor, setShowCopyFeedbackFor] = useState<string | null>(null);
 
-  const instrumentEmojis =
-    '🎸 🎹 🥁 🎺 🎻 🎷 🪕 🪗 🎤 🎧 📯 🪘 🎼';
+  const instrumentEmojiArray = '🎸 🎹 🥁 🎺 🎻 🎷 🪕 🪗 🎤 🎧 📯 🪘 🎼'.split(' ');
 
   useEffect(() => {
-    setCharCount(tweetText.length);
+    // Using countTweetLength for the simple char count as well for consistency,
+    // though the original only used .length. This should be fine.
+    setCharCount(countTweetLength(tweetText));
     setAnimateCount(true);
-    const t = setTimeout(() => setAnimateCount(false), 300);
+    // Slightly longer animation time to match the new pulse-fade duration
+    const t = setTimeout(() => setAnimateCount(false), 500);
     return () => clearTimeout(t);
   }, [tweetText]);
 
@@ -33,28 +37,42 @@ function App() {
   const referenceMeetingNumber = 208;
 
   const generateThisWeeksSchedule = () => {
-    const today = new Date();
-    const upcomingSunday = new Date(today);
-    while (upcomingSunday.getDay() !== 0) {
-      upcomingSunday.setDate(upcomingSunday.getDate() + 1);
-    }
+    setIsLoadingSchedule(true);
+    // Simulate a short delay for visual feedback, as the actual operation is very fast
+    setTimeout(() => {
+      const today = new Date();
+      const upcomingSunday = new Date(today);
+      while (upcomingSunday.getDay() !== 0) {
+        upcomingSunday.setDate(upcomingSunday.getDate() + 1);
+      }
 
-    const month = upcomingSunday.getMonth() + 1;
-    const day = upcomingSunday.getDate();
+      const month = upcomingSunday.getMonth() + 1;
+      const day = upcomingSunday.getDate();
 
-    const weeksDiff = Math.round(
-      (upcomingSunday.getTime() - referenceDate.getTime()) /
-        (7 * 24 * 60 * 60 * 1000)
-    );
-    const meetingNumber = referenceMeetingNumber + weeksDiff;
+      const weeksDiff = Math.round(
+        (upcomingSunday.getTime() - referenceDate.getTime()) /
+          (7 * 24 * 60 * 60 * 1000)
+      );
+      const meetingNumber = referenceMeetingNumber + weeksDiff;
 
-    const template =
-      `自由文 #あ茶会\n\n` +
-      `第${meetingNumber}回 🎸題名のないお茶会🏘️\n` +
-      `【日時】${month}月${day}日(日) 14:30〜16:00\n` +
-      `【場所】ワールド名 By クリエイター名\n` +
-      `【参加方法】Group＋「題名のないお茶会」にjoin`;
-    setTweetText(template);
+      const template =
+        `自由文 #あ茶会\n\n` +
+        `第${meetingNumber}回 🎸題名のないお茶会🏘️\n` +
+        `【日時】${month}月${day}日(日) 14:30〜16:00\n` +
+        `【場所】ワールド名 By クリエイター名\n` +
+        `【参加方法】Group＋「題名のないお茶会」にjoin`;
+      setTweetText(template);
+      setIsLoadingSchedule(false);
+    }, 300); // 300ms delay
+  };
+
+  const handleEmojiCopy = (emoji: string) => {
+    navigator.clipboard.writeText(emoji).then(() => {
+      setShowCopyFeedbackFor(emoji);
+      setTimeout(() => {
+        setShowCopyFeedbackFor(null);
+      }, 1500);
+    }).catch(err => console.error('Failed to copy emoji: ', err));
   };
 
   const validateTweet = (text: string) => {
@@ -143,141 +161,162 @@ function App() {
   const maxTweetLength = 280;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-4">
+    <div className="min-h-screen bg-neutral-ultralight py-16 px-6 sm:px-8 font-sans">
       <div className="max-w-2xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">
-          あ茶会 Tweet Validator
-        </h1>
+        <header className="text-center mb-12">
+          <h1 className="text-5xl font-extrabold text-brand-primary">
+            あ茶会 Tweet Validator
+          </h1>
+        </header>
         
-        <div className="bg-white rounded-lg shadow-md p-6 mb-8">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+        <section className="bg-neutral-light rounded-xl shadow-2xl p-8 mb-10">
+          <label htmlFor="tweetTextArea" className="block text-lg font-semibold text-neutral-dark mb-3">
             ツイートテキスト
           </label>
           <button
             onClick={generateThisWeeksSchedule}
-            className="mb-3 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+            disabled={isLoadingSchedule}
+            className="mb-6 px-6 py-3 bg-brand-primary text-white rounded-lg hover:bg-opacity-85 transition-all duration-150 text-base font-medium shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:ring-opacity-75 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center w-full sm:w-auto"
           >
-            今週の予定を生成
+            {isLoadingSchedule ? (
+              <>
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                生成中...
+              </>
+            ) : (
+              '今週の予定を生成'
+            )}
           </button>
-          <div className="mb-3 text-sm flex items-center justify-between">
-            <span>楽器の絵文字候補: {instrumentEmojis}</span>
-            <span className={`font-mono ${animateCount ? 'animate-pulse' : ''}`}>文字数: {charCount}</span>
+          
+          <div className="mb-4 p-4 border border-neutral-medium/50 rounded-lg bg-neutral-ultralight/50">
+            <h3 className="text-sm font-semibold text-neutral-dark mb-3">楽器の絵文字候補 (クリックしてコピー):</h3>
+            <div className="flex flex-wrap gap-2">
+              {instrumentEmojiArray.map((emoji, index) => (
+                <div key={index} className="relative">
+                  <button
+                    onClick={() => handleEmojiCopy(emoji)}
+                    className="p-2 text-2xl bg-white rounded-md shadow-sm hover:bg-neutral-light transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-brand-accent"
+                    aria-label={`Copy emoji ${emoji}`}
+                  >
+                    {emoji}
+                  </button>
+                  {showCopyFeedbackFor === emoji && (
+                    <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs bg-neutral-dark text-white px-2 py-0.5 rounded-md shadow-lg whitespace-nowrap">
+                      Copied!
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="mb-3 text-sm text-right text-neutral-dark">
+             <span className={`font-mono ${animateCount ? 'animate-pulse-fade' : ''}`}>文字数: {charCount}</span>
           </div>
           <textarea
+            id="tweetTextArea"
             value={tweetText}
             onChange={(e) => setTweetText(e.target.value)}
-            className="w-full h-48 p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full h-56 p-4 border border-neutral-medium rounded-lg focus:ring-2 focus:ring-brand-accent focus:border-brand-accent bg-white text-neutral-dark text-base shadow-sm"
             placeholder="ここにツイートを入力してください..."
           />
           <div
-            className={`mt-2 text-sm text-right ${
-              tweetLength > maxTweetLength ? 'text-red-600' : 'text-gray-600'
+            className={`mt-3 text-sm text-right font-medium ${
+              tweetLength > maxTweetLength ? 'text-red-500' : 'text-neutral-medium'
             }`}
           >
             {tweetLength} / {maxTweetLength}
           </div>
-        </div>
+        </section>
 
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <h2 className="text-xl font-semibold mb-4">検証結果</h2>
+        <section className="bg-neutral-light rounded-xl shadow-2xl p-8">
+          <h2 className="text-3xl font-bold text-brand-secondary mb-8 text-center">検証結果</h2>
           
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-5 h-5 text-gray-600" />
-                <span>日曜日の日付</span>
-              </div>
-              {validation.isSunday ? 
-                <CheckCircle className="w-5 h-5 text-green-500" /> : 
-                <XCircle className="w-5 h-5 text-red-500" />
-              }
-            </div>
-
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
-              <div className="flex items-center gap-2">
-                <Clock className="w-5 h-5 text-gray-600" />
-                <span>時間が含まれている</span>
-              </div>
-              {validation.hasTime ? 
-                <CheckCircle className="w-5 h-5 text-green-500" /> : 
-                <XCircle className="w-5 h-5 text-red-500" />
-              }
-            </div>
-
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
-              <div className="flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-gray-600" />
-                <span>有効な場所形式が含まれている</span>
-              </div>
-              {validation.hasValidLocation ? 
-                <CheckCircle className="w-5 h-5 text-green-500" /> : 
-                <XCircle className="w-5 h-5 text-red-500" />
-              }
-            </div>
-
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
-              <div className="flex items-center gap-2">
-                <Hash className="w-5 h-5 text-gray-600" />
-                <span>#あ茶会 ハッシュタグが含まれている</span>
-              </div>
-              {validation.hasHashtag ? 
-                <CheckCircle className="w-5 h-5 text-green-500" /> : 
-                <XCircle className="w-5 h-5 text-red-500" />
-              }
-            </div>
-
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-md">
-              <div className="flex items-center gap-2">
-                <span className="w-5 h-5 flex items-center justify-center font-bold text-gray-600">#</span>
-                <span>開催回数</span>
-              </div>
-              {validation.isCorrectMeeting ? 
-                <CheckCircle className="w-5 h-5 text-green-500" /> : 
-                <div className="text-red-500 text-sm">
-                  {validation.meetingNumber ? 
-                    `#${validation.expectedMeetingNumber}であるべきです` : 
-                    '開催回数が欠落しています'}
+          <div className="space-y-5">
+            {[
+              { Icon: Calendar, label: "日曜日の日付", isValid: validation.isSunday, dataTestId: "validation-date" },
+              { Icon: Clock, label: "時間が含まれている", isValid: validation.hasTime, dataTestId: "validation-time" },
+              { Icon: MapPin, label: "有効な場所形式が含まれている", isValid: validation.hasValidLocation, dataTestId: "validation-location" },
+              { Icon: Hash, label: "#あ茶会 ハッシュタグが含まれている", isValid: validation.hasHashtag, dataTestId: "validation-hashtag" },
+            ].map(({ Icon, label, isValid, dataTestId }) => (
+              <div key={label} data-testid={dataTestId} className="flex items-center justify-between p-4 bg-white rounded-lg shadow">
+                <div className="flex items-center gap-3">
+                  <Icon className="w-6 h-6 text-brand-primary" />
+                  <span className="text-neutral-dark text-base">{label}</span>
                 </div>
-              }
+                {isValid ? 
+                  <CheckCircle className="w-7 h-7 text-green-500" /> : 
+                  <XCircle className="w-7 h-7 text-red-500" />
+                }
+              </div>
+            ))}
+
+            <div data-testid="validation-meeting-number" className="flex items-center justify-between p-4 bg-white rounded-lg shadow">
+              <div className="flex items-center gap-3">
+                <span className="w-6 h-6 flex items-center justify-center font-bold text-brand-primary text-xl">#</span>
+                <span className="text-neutral-dark text-base">開催回数</span>
+              </div>
+              {validation.isCorrectMeeting ? (
+                <CheckCircle className="w-7 h-7 text-green-500" />
+              ) : (
+                <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded-md text-xs font-semibold">
+                  {validation.meetingNumber !== null
+                    ? `第${validation.expectedMeetingNumber}回であるべきです`
+                    : '開催回数が欠落しています'}
+                </span>
+              )}
             </div>
           </div>
 
           {validation.isValid && (
-            <div className="mt-6 p-4 bg-gray-50 rounded-md">
-              <h3 className="font-semibold mb-2">抽出された情報:</h3>
-              <dl className="space-y-2">
-                <div className="flex gap-2">
-                  <dt className="font-medium">会議:</dt>
-                  <dd>{validation.extractedInfo.meetingNumber}</dd>
+            <div className="mt-8 p-6 bg-white rounded-lg shadow">
+              <h3 className="text-xl font-bold text-brand-secondary mb-4">抽出された情報:</h3>
+              <dl className="space-y-3 text-neutral-dark text-base">
+                <div className="flex gap-2 items-baseline">
+                  <dt className="font-bold text-neutral-dark w-20">会議:</dt>
+                  <dd className="text-neutral-dark flex-1">{validation.extractedInfo.meetingNumber}</dd>
                 </div>
-                <div className="flex gap-2">
-                  <dt className="font-medium">日付:</dt>
-                  <dd>{validation.extractedInfo.date}</dd>
+                <div className="flex gap-2 items-baseline">
+                  <dt className="font-bold text-neutral-dark w-20">日付:</dt>
+                  <dd className="text-neutral-dark flex-1">{validation.extractedInfo.date}</dd>
                 </div>
-                <div className="flex gap-2">
-                  <dt className="font-medium">時間:</dt>
-                  <dd>{validation.extractedInfo.time}</dd>
+                <div className="flex gap-2 items-baseline">
+                  <dt className="font-bold text-neutral-dark w-20">時間:</dt>
+                  <dd className="text-neutral-dark flex-1">{validation.extractedInfo.time}</dd>
                 </div>
-                <div className="flex gap-2">
-                  <dt className="font-medium">ワールド:</dt>
-                  <dd>{validation.extractedInfo.worldName}</dd>
+                <div className="flex gap-2 items-baseline">
+                  <dt className="font-bold text-neutral-dark w-20">ワールド:</dt>
+                  <dd className="text-neutral-dark flex-1">{validation.extractedInfo.worldName}</dd>
                 </div>
-                <div className="flex gap-2">
-                  <dt className="font-medium">クリエイター:</dt>
-                  <dd>{validation.extractedInfo.creator}</dd>
+                <div className="flex gap-2 items-baseline">
+                  <dt className="font-bold text-neutral-dark w-20">クリエイター:</dt>
+                  <dd className="text-neutral-dark flex-1">{validation.extractedInfo.creator}</dd>
                 </div>
               </dl>
             </div>
           )}
 
-          <div className="mt-6 p-4 rounded-md text-center font-medium">
+          <div
+            className="mt-10 p-5 rounded-lg text-center text-2xl font-semibold shadow-inner flex items-center justify-center"
+            style={{
+              background: validation.isValid
+                ? 'rgba(20, 184, 166, 0.15)' // brand-primary with more alpha
+                : 'rgba(255, 127, 80, 0.15)', // brand-secondary with more alpha
+            }}
+          >
             {validation.isValid ? (
-              <div className="text-green-600">✨ ツイートは有効です！ ✨</div>
+              <div className="text-brand-primary flex items-center">
+                <CheckCircle className="w-8 h-8 inline-block mr-3 align-middle" />
+                <span>✨ ツイートは有効です！ ✨</span>
+              </div>
             ) : (
-              <div className="text-red-600">ツイートに調整が必要です</div>
+              <div className="text-brand-secondary flex items-center">
+                <XCircle className="w-8 h-8 inline-block mr-3 align-middle" />
+                <span>ツイートに調整が必要です</span>
+              </div>
             )}
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );
