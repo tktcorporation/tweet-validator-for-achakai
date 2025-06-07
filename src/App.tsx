@@ -48,6 +48,17 @@ function App() {
   const referenceMeetingNumber = 208;
 
   const generateThisWeeksSchedule = () => {
+    if (
+      tweetText.trim() !== '' ||
+      freeText.trim() !== '' ||
+      worldName.trim() !== '' ||
+      creatorName.trim() !== ''
+    ) {
+      const confirmed = window.confirm('現在の入力内容は上書きされます。続行しますか?');
+      if (!confirmed) {
+        return;
+      }
+    }
     setIsLoadingSchedule(true);
     // Simulate a short delay for visual feedback, as the actual operation is very fast
     setTimeout(() => {
@@ -314,33 +325,57 @@ function App() {
              <span className={`font-mono ${animateCount ? 'animate-pulse-fade' : ''}`}>文字数: {charCount}</span>
           </div>
           {structuredMode ? (
-            <div className="space-y-2">
-              <input
-                type="text"
-                value={freeText}
-                onChange={(e) => setFreeText(e.target.value)}
-                className="w-full p-2 border border-neutral-medium rounded-md focus:ring-2 focus:ring-brand-accent focus:border-brand-accent"
-                placeholder="自由文"
-              />
-              <input
-                type="text"
-                value={worldName}
-                onChange={(e) => setWorldName(e.target.value)}
-                className="w-full p-2 border border-neutral-medium rounded-md focus:ring-2 focus:ring-brand-accent focus:border-brand-accent"
-                placeholder="ワールド名"
-              />
-              <input
-                type="text"
-                value={creatorName}
-                onChange={(e) => setCreatorName(e.target.value)}
-                className="w-full p-2 border border-neutral-medium rounded-md focus:ring-2 focus:ring-brand-accent focus:border-brand-accent"
-                placeholder="クリエイター名"
-              />
-              <textarea
-                readOnly
-                value={tweetText}
-                className="w-full h-48 p-3 border border-neutral-medium rounded-lg bg-neutral-ultralight text-neutral-dark text-base shadow-sm"
-              />
+            <div className="space-y-4">
+              <div>
+                <label htmlFor="freeTextInput" className="block text-sm font-semibold text-neutral-dark mb-1">
+                  自由文
+                </label>
+                <input
+                  id="freeTextInput"
+                  type="text"
+                  value={freeText}
+                  onChange={(e) => setFreeText(e.target.value)}
+                  className="w-full p-2 border border-neutral-medium rounded-md focus:ring-2 focus:ring-brand-accent focus:border-brand-accent"
+                  placeholder="自由文"
+                />
+              </div>
+              <div>
+                <label htmlFor="worldNameInput" className="block text-sm font-semibold text-neutral-dark mb-1">
+                  ワールド名
+                </label>
+                <input
+                  id="worldNameInput"
+                  type="text"
+                  value={worldName}
+                  onChange={(e) => setWorldName(e.target.value)}
+                  className="w-full p-2 border border-neutral-medium rounded-md focus:ring-2 focus:ring-brand-accent focus:border-brand-accent"
+                  placeholder="ワールド名"
+                />
+              </div>
+              <div>
+                <label htmlFor="creatorNameInput" className="block text-sm font-semibold text-neutral-dark mb-1">
+                  クリエイター名
+                </label>
+                <input
+                  id="creatorNameInput"
+                  type="text"
+                  value={creatorName}
+                  onChange={(e) => setCreatorName(e.target.value)}
+                  className="w-full p-2 border border-neutral-medium rounded-md focus:ring-2 focus:ring-brand-accent focus:border-brand-accent"
+                  placeholder="クリエイター名"
+                />
+              </div>
+              <div>
+                <label htmlFor="tweetTemplate" className="block text-sm font-semibold text-neutral-dark mb-1">
+                  生成されたテンプレート
+                </label>
+                <textarea
+                  id="tweetTemplate"
+                  readOnly
+                  value={tweetText}
+                  className="w-full h-48 p-3 border border-neutral-medium rounded-lg bg-neutral-ultralight text-neutral-dark text-base shadow-sm"
+                />
+              </div>
             </div>
           ) : (
             <textarea
