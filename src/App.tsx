@@ -1,249 +1,33 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Calendar, Hash, CheckCircle, XCircle, Clock, MapPin, Loader2 } from 'lucide-react';
-
-function countTweetLength(text: string): number {
-  // Approximate Twitter's weighted character count where certain
-  // wide characters count as 2. This follows the ranges used by
-  // the Twitter Text library.
-  const wideChar = /[\u1100-\u115F\u2329\u232A\u2E80-\uA4CF\uAC00-\uD7A3\uF900-\uFAFF\uFE10-\uFE19\uFE30-\uFE6F\uFF00-\uFF60\uFFE0-\uFFE6]/u;
-  let count = 0;
-  for (const ch of [...text]) {
-    count += wideChar.test(ch) ? 2 : 1;
-  }
-  return count;
-}
+import useTweetState, { instrumentEmojiArray } from './hooks/useTweetState';
 
 function App() {
-  const [tweetText, setTweetText] = useState('');
-  const [charCount, setCharCount] = useState(0);
-  const [animateCount, setAnimateCount] = useState(false);
-  const [isLoadingSchedule, setIsLoadingSchedule] = useState(false);
-  const [showCopyFeedbackFor, setShowCopyFeedbackFor] = useState<string | null>(null);
-  const [structuredMode, setStructuredMode] = useState(false);
-  const [freeText, setFreeText] = useState('');
-  const [worldName, setWorldName] = useState('');
-  const [creatorName, setCreatorName] = useState('');
-  const [structuredTemplate, setStructuredTemplate] = useState<string[]>([]);
-
-  const instrumentEmojiArray = '🎸 🎹 🥁 🎺 🎻 🎷 🪕 🪗 🎤 🎧 📯 🪘 🎼'.split(' ');
-
-  useEffect(() => {
-    // Using countTweetLength for the simple char count as well for consistency,
-    // though the original only used .length. This should be fine.
-    setCharCount(countTweetLength(tweetText));
-    setAnimateCount(true);
-    // Slightly longer animation time to match the new pulse-fade duration
-    const t = setTimeout(() => setAnimateCount(false), 500);
-    return () => clearTimeout(t);
-  }, [tweetText]);
-
-  useEffect(() => {
-    if (structuredMode) {
-      setTweetText(buildStructuredTweet(freeText, worldName, creatorName));
-    }
-  }, [freeText, worldName, creatorName, structuredMode]);
-
-  // Reference point: Meeting #208 on 2025-02-02
-  const referenceDate = new Date('2025-02-02');
-  const referenceMeetingNumber = 208;
-
-  const generateThisWeeksSchedule = () => {
-    if (
-      tweetText.trim() !== '' ||
-      freeText.trim() !== '' ||
-      worldName.trim() !== '' ||
-      creatorName.trim() !== ''
-    ) {
-      const confirmed = window.confirm('現在の入力内容は上書きされます。続行しますか?');
-      if (!confirmed) {
-        return;
-      }
-    }
-    setIsLoadingSchedule(true);
-    // Simulate a short delay for visual feedback, as the actual operation is very fast
-    setTimeout(() => {
-      const today = new Date();
-      const upcomingSunday = new Date(today);
-      while (upcomingSunday.getDay() !== 0) {
-        upcomingSunday.setDate(upcomingSunday.getDate() + 1);
-      }
-
-      const month = upcomingSunday.getMonth() + 1;
-      const day = upcomingSunday.getDate();
-
-      const weeksDiff = Math.round(
-        (upcomingSunday.getTime() - referenceDate.getTime()) /
-          (7 * 24 * 60 * 60 * 1000)
-      );
-      const meetingNumber = referenceMeetingNumber + weeksDiff;
-
-      const template =
-        `自由文 #あ茶会\n\n` +
-        `第${meetingNumber}回 🎸題名のないお茶会🏘️\n` +
-        `【日時】${month}月${day}日(日) 14:30〜16:00\n` +
-        `【場所】ワールド名 By クリエイター名\n` +
-        `【参加方法】Group＋「題名のないお茶会」にjoin`;
-      setTweetText(template);
-      setStructuredTemplate(template.split('\n'));
-      setFreeText('');
-      setWorldName('');
-      setCreatorName('');
-      setStructuredMode(true);
-      setIsLoadingSchedule(false);
-    }, 300); // 300ms delay
-  };
-
-  const handleEmojiCopy = (emoji: string) => {
-    navigator.clipboard.writeText(emoji).then(() => {
-      setShowCopyFeedbackFor(emoji);
-      setTimeout(() => {
-        setShowCopyFeedbackFor(null);
-      }, 1500);
-    }).catch(err => console.error('Failed to copy emoji: ', err));
-  };
-
-  const handleTweetCopy = () => {
-    navigator.clipboard.writeText(tweetText).then(() => {
-      setShowCopyFeedbackFor('tweet');
-      setTimeout(() => setShowCopyFeedbackFor(null), 1500);
-    }).catch(err => console.error('Failed to copy text: ', err));
-  };
-
-  const parseStructuredFields = (text: string) => {
-    const free = text.split('\n')[0]?.replace('#あ茶会', '').trim() || '';
-    const locationRegex = /【場所】([^\n]+)\s*By\s*(.+?)(?:\s*$|\n)/i;
-    const locationMatch = text.match(locationRegex);
-    if (!locationMatch) {
-      return null;
-    }
-    return {
-      freeText: free === '自由文' ? '' : free,
-      world: locationMatch[1].trim() === 'ワールド名' ? '' : locationMatch[1].trim(),
-      creator: locationMatch[2].trim() === 'クリエイター名' ? '' : locationMatch[2].trim(),
-    };
-  };
-
-  const switchToStructuredMode = () => {
-    const parsed = parseStructuredFields(tweetText);
-    if (!parsed) {
-      alert('現在のテキストはテンプレートと互換性がないため、構造化編集に戻せません。');
-      return;
-    }
-    setFreeText(parsed.freeText);
-    setWorldName(parsed.world);
-    setCreatorName(parsed.creator);
-    setStructuredTemplate(tweetText.split('\n'));
-    setStructuredMode(true);
-  };
-
-  const buildStructuredTweet = (free: string, world: string, creator: string) => {
-    if (!structuredTemplate.length) return tweetText;
-    const lines = [...structuredTemplate];
-    lines[0] = `${free} #あ茶会`;
-    return lines
-      .map((line) =>
-        line.startsWith('【場所】')
-          ? `【場所】${world} By ${creator}`
-          : line,
-      )
-      .join('\n');
-  };
-
-  const validateTweet = (text: string) => {
-    // Extract meeting number (第N回)
-    const meetingRegex = /第(\d+)回/;
-    const meetingMatch = text.match(meetingRegex);
-
-    // Extract date (M月D日)
-    const dateRegex = /(\d+)月(\d+)日\(日\)/;
-    const dateMatch = text.match(dateRegex);
-
-    // Extract time (HH:MM〜HH:MM)
-    const timeRegex = /(\d{1,2}):(\d{2})〜(\d{1,2}):(\d{2})/;
-    const timeMatch = text.match(timeRegex);
-
-    // Check hashtag
-    const hasHashtag = text.includes('#あ茶会');
-
-    // Extract location with world name and creator. The world name may include
-    // the letter "B", so capture everything up to a line break instead of
-    // excluding that character.
-    const locationRegex = /【場所】([^\n]+)\s*By\s*(.+?)(?:\s*$|\n)/i;
-    const locationMatch = text.match(locationRegex);
-    const hasValidLocation = locationMatch !== null;
-
-    const placeholdersRegex = /(ワールド名|クリエイター名|自由文)/;
-    const hasPlaceholders = placeholdersRegex.test(text);
-
-    if (!dateMatch) {
-      return {
-        isValid: false,
-        date: null,
-        isSunday: false,
-        hasHashtag,
-        meetingNumber: null,
-        isCorrectMeeting: false,
-        hasTime: false,
-        hasValidLocation: false,
-        hasPlaceholders,
-        extractedInfo: {
-          date: null,
-          time: null,
-          worldName: null,
-          creator: null,
-          meetingNumber: null
-        }
-      };
-    }
-
-    // Convert Japanese date to full date (assuming 2025)
-    const month = parseInt(dateMatch[1]);
-    const day = parseInt(dateMatch[2]);
-    const tweetDate = new Date(2025, month - 1, day);
-    const isSunday = tweetDate.getDay() === 0;
-
-    // Calculate expected meeting number
-    const weeksDiff = Math.round((tweetDate.getTime() - referenceDate.getTime()) / (7 * 24 * 60 * 60 * 1000));
-    const expectedMeetingNumber = referenceMeetingNumber + weeksDiff;
-
-    const meetingNumber = meetingMatch ? parseInt(meetingMatch[1]) : null;
-    const isCorrectMeeting = meetingNumber === expectedMeetingNumber;
-
-    // Format time
-    const time = timeMatch 
-      ? `${timeMatch[1]}:${timeMatch[2]}〜${timeMatch[3]}:${timeMatch[4]}`
-      : null;
-
-    return {
-      isValid:
-        isSunday &&
-        hasHashtag &&
-        isCorrectMeeting &&
-        timeMatch !== null &&
-        hasValidLocation &&
-        !hasPlaceholders,
-      date: tweetDate,
-      isSunday,
-      hasHashtag,
-      meetingNumber,
-      expectedMeetingNumber,
-      isCorrectMeeting,
-      hasTime: timeMatch !== null,
-      hasValidLocation,
-      hasPlaceholders,
-      extractedInfo: {
-        date: dateMatch ? `${month}月${day}日(日)` : null,
-        time,
-        worldName: locationMatch ? locationMatch[1].trim() : null,
-        creator: locationMatch ? locationMatch[2].trim() : null,
-        meetingNumber: meetingNumber ? `第${meetingNumber}回` : null
-      }
-    };
-  };
-
-  const validation = validateTweet(tweetText);
-  const tweetLength = countTweetLength(tweetText);
-  const maxTweetLength = 280;
+  const {
+    tweetText,
+    setTweetText,
+    charCount,
+    animateCount,
+    isLoadingSchedule,
+    showCopyFeedbackFor,
+    structuredMode,
+    setStructuredMode,
+    freeText,
+    setFreeText,
+    worldName,
+    setWorldName,
+    creatorName,
+    setCreatorName,
+    instrumentEmoji,
+    setInstrumentEmoji,
+    generateThisWeeksSchedule,
+    handleEmojiCopy,
+    handleTweetCopy,
+    switchToStructuredMode,
+    validation,
+    tweetLength,
+    maxTweetLength,
+  } = useTweetState();
 
   return (
     <div className="min-h-screen bg-neutral-ultralight py-16 px-6 sm:px-8 font-sans">
@@ -305,9 +89,12 @@ function App() {
               {instrumentEmojiArray.map((emoji, index) => (
                 <div key={index} className="relative">
                   <button
-                    onClick={() => handleEmojiCopy(emoji)}
-                    className="p-1.5 text-xl bg-white rounded-md shadow-sm hover:bg-neutral-medium/20 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-brand-accent" // Adjusted padding and text size
-                    aria-label={`Copy emoji ${emoji}`}
+                    onClick={() => {
+                      setInstrumentEmoji(emoji);
+                      handleEmojiCopy(emoji);
+                    }}
+                    className="p-1.5 text-xl bg-white rounded-md shadow-sm hover:bg-neutral-medium/20 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-brand-accent"
+                    aria-label={`Select emoji ${emoji}`}
                   >
                     {emoji}
                   </button>
@@ -337,6 +124,19 @@ function App() {
                   onChange={(e) => setFreeText(e.target.value)}
                   className="w-full p-2 border border-neutral-medium rounded-md focus:ring-2 focus:ring-brand-accent focus:border-brand-accent"
                   placeholder="自由文"
+                />
+              </div>
+              <div>
+                <label htmlFor="instrumentEmojiInput" className="block text-sm font-semibold text-neutral-dark mb-1">
+                  お茶会絵文字
+                </label>
+                <input
+                  id="instrumentEmojiInput"
+                  type="text"
+                  value={instrumentEmoji}
+                  onChange={(e) => setInstrumentEmoji(e.target.value)}
+                  className="w-full p-2 border border-neutral-medium rounded-md focus:ring-2 focus:ring-brand-accent focus:border-brand-accent"
+                  placeholder="🎸"
                 />
               </div>
               <div>
