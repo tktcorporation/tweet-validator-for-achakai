@@ -117,12 +117,11 @@ function App() {
                 <label htmlFor="freeTextInput" className="block text-sm font-semibold text-neutral-dark mb-1">
                   自由文
                 </label>
-                <input
+                <textarea
                   id="freeTextInput"
-                  type="text"
                   value={freeText}
                   onChange={(e) => setFreeText(e.target.value)}
-                  className="w-full p-2 border border-neutral-medium rounded-md focus:ring-2 focus:ring-brand-accent focus:border-brand-accent"
+                  className="w-full p-2 h-24 border border-neutral-medium rounded-md focus:ring-2 focus:ring-brand-accent focus:border-brand-accent"
                   placeholder="自由文"
                 />
               </div>

@@ -19,7 +19,8 @@ export interface ParsedFields {
 }
 
 export function parseStructuredFields(text: string): ParsedFields | null {
-  const free = text.split('\n')[0]?.replace('#あ茶会', '').trim() || '';
+  const freeMatch = text.match(/^[\s\S]*?(?=#あ茶会)/);
+  const free = freeMatch ? freeMatch[0].trim() : '';
   const locationRegex = /【場所】([^\n]+)\s*By\s*(.+?)(?:\s*$|\n)/i;
   const locationMatch = text.match(locationRegex);
   if (!locationMatch) {
