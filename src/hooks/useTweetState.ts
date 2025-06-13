@@ -16,6 +16,7 @@ export interface ParsedFields {
   world: string;
   creator: string;
   instrument: string;
+  suffix: string;
 }
 
 export function parseStructuredFields(text: string): ParsedFields | null {
@@ -26,13 +27,17 @@ export function parseStructuredFields(text: string): ParsedFields | null {
   if (!locationMatch) {
     return null;
   }
-  const meetingEmojiMatch = text.match(/第\d+回\s*(.*?)題名のないお茶会/);
+  const meetingEmojiMatch = text.match(
+    /第\d+回\s*(.*?)題名のないお茶会([^\n]*)/,
+  );
   const instrument = meetingEmojiMatch ? meetingEmojiMatch[1].trim() : '🎸';
+  const suffix = meetingEmojiMatch ? meetingEmojiMatch[2].trim() : '🏘️';
   return {
     freeText: free === '自由文' ? '' : free,
     world: locationMatch[1].trim() === 'ワールド名' ? '' : locationMatch[1].trim(),
     creator: locationMatch[2].trim() === 'クリエイター名' ? '' : locationMatch[2].trim(),
     instrument,
+    suffix,
   };
 }
 
@@ -42,6 +47,7 @@ export function buildStructuredTweet(
   world: string,
   creator: string,
   emoji: string,
+  suffix: string,
 ): string {
   if (!template.length) return '';
   const lines = [...template];
@@ -52,7 +58,10 @@ export function buildStructuredTweet(
         return `【場所】${world} By ${creator}`;
       }
       if (line.includes('題名のないお茶会')) {
-        return line.replace(/(第\d+回 )(.+?)(題名のないお茶会)/, `$1${emoji}$3`);
+        return line.replace(
+          /(第\d+回 )(.+?)(題名のないお茶会)([^\n]*)/,
+          `$1${emoji}$3${suffix}`,
+        );
       }
       return line;
     })
@@ -151,6 +160,7 @@ export function useTweetState() {
   const [worldName, setWorldName] = useState('');
   const [creatorName, setCreatorName] = useState('');
   const [instrumentEmoji, setInstrumentEmoji] = useState('🎸');
+  const [suffixEmoji, setSuffixEmoji] = useState('🏘️');
   const [structuredTemplate, setStructuredTemplate] = useState<string[]>([]);
 
   useEffect(() => {
@@ -169,10 +179,11 @@ export function useTweetState() {
           worldName,
           creatorName,
           instrumentEmoji,
+          suffixEmoji,
         ),
       );
     }
-  }, [freeText, worldName, creatorName, instrumentEmoji, structuredMode, structuredTemplate]);
+  }, [freeText, worldName, creatorName, instrumentEmoji, suffixEmoji, structuredMode, structuredTemplate]);
 
   const referenceDate = new Date('2025-02-02');
   const referenceMeetingNumber = 208;
@@ -209,7 +220,7 @@ export function useTweetState() {
       }
       const template =
         `自由文 #あ茶会\n\n` +
-        `第${meetingNumber}回 ${instrumentEmoji}題名のないお茶会🏘️\n` +
+        `第${meetingNumber}回 ${instrumentEmoji}題名のないお茶会${suffixEmoji}\n` +
         `【日時】${month}月${day}日(日) 14:30〜16:00\n` +
         `【場所】ワールド名 By クリエイター名\n` +
         `【参加方法】Group＋「題名のないお茶会」にjoin`;
@@ -255,6 +266,7 @@ export function useTweetState() {
     setWorldName(parsed.world);
     setCreatorName(parsed.creator);
     setInstrumentEmoji(parsed.instrument);
+    setSuffixEmoji(parsed.suffix);
     setStructuredTemplate(tweetText.split('\n'));
     setStructuredMode(true);
   };
@@ -280,6 +292,8 @@ export function useTweetState() {
     setCreatorName,
     instrumentEmoji,
     setInstrumentEmoji,
+    suffixEmoji,
+    setSuffixEmoji,
     structuredTemplate,
     generateThisWeeksSchedule,
     handleEmojiCopy,

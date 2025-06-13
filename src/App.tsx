@@ -20,6 +20,8 @@ function App() {
     setCreatorName,
     instrumentEmoji,
     setInstrumentEmoji,
+    suffixEmoji,
+    setSuffixEmoji,
     generateThisWeeksSchedule,
     handleEmojiCopy,
     handleTweetCopy,
@@ -86,11 +88,36 @@ function App() {
           <div className="mb-4">
             <span className="text-sm font-semibold text-neutral-dark mb-1">楽器絵文字:</span>
             <div className="flex overflow-x-auto gap-2 py-2 scrollbar-thin scrollbar-thumb-neutral-medium/50 scrollbar-track-neutral-light">
+          {instrumentEmojiArray.map((emoji, index) => (
+            <div key={index} className="relative">
+              <button
+                onClick={() => {
+                  setInstrumentEmoji(emoji);
+                  handleEmojiCopy(emoji);
+                }}
+                className="p-1.5 text-xl bg-white rounded-md shadow-sm hover:bg-neutral-medium/20 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-brand-accent"
+                aria-label={`Select emoji ${emoji}`}
+              >
+                {emoji}
+              </button>
+              {showCopyFeedbackFor === emoji && (
+                <span className="absolute -top-7 left-1/2 -translate-x-1/2 text-xs bg-neutral-dark text-white px-2 py-0.5 rounded-md shadow-lg whitespace-nowrap z-10">
+                  Copied!
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+          <div className="mb-4">
+            <span className="text-sm font-semibold text-neutral-dark mb-1">他の絵文字:</span>
+            <div className="flex overflow-x-auto gap-2 py-2 scrollbar-thin scrollbar-thumb-neutral-medium/50 scrollbar-track-neutral-light">
               {instrumentEmojiArray.map((emoji, index) => (
                 <div key={index} className="relative">
                   <button
                     onClick={() => {
-                      setInstrumentEmoji(emoji);
+                      setSuffixEmoji(emoji);
                       handleEmojiCopy(emoji);
                     }}
                     className="p-1.5 text-xl bg-white rounded-md shadow-sm hover:bg-neutral-medium/20 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-brand-accent"
@@ -136,6 +163,19 @@ function App() {
                   onChange={(e) => setInstrumentEmoji(e.target.value)}
                   className="w-full p-2 border border-neutral-medium rounded-md focus:ring-2 focus:ring-brand-accent focus:border-brand-accent"
                   placeholder="🎸"
+                />
+              </div>
+              <div>
+                <label htmlFor="suffixEmojiInput" className="block text-sm font-semibold text-neutral-dark mb-1">
+                  後ろの絵文字
+                </label>
+                <input
+                  id="suffixEmojiInput"
+                  type="text"
+                  value={suffixEmoji}
+                  onChange={(e) => setSuffixEmoji(e.target.value)}
+                  className="w-full p-2 border border-neutral-medium rounded-md focus:ring-2 focus:ring-brand-accent focus:border-brand-accent"
+                  placeholder="🏘️"
                 />
               </div>
               <div>

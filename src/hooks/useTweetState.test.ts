@@ -17,6 +17,12 @@ describe('parseStructuredFields', () => {
     expect(result?.instrument).toBe('🥁');
   });
 
+  it('extracts suffix emoji', () => {
+    const text = template.join('\n').replace('🏘️', '🎪');
+    const result = parseStructuredFields(text);
+    expect(result?.suffix).toBe('🎪');
+  });
+
   it('handles multi-line free text', () => {
     const multi = template.join('\n').replace('自由文', 'line1\nline2');
     const result = parseStructuredFields(multi);
@@ -26,14 +32,15 @@ describe('parseStructuredFields', () => {
 
 describe('buildStructuredTweet', () => {
   it('replaces placeholders and emoji', () => {
-    const result = buildStructuredTweet(template, 'test', 'World', 'Creator', '🎹');
+    const result = buildStructuredTweet(template, 'test', 'World', 'Creator', '🎹', '🎪');
     expect(result).toContain('第210回 🎹題名のないお茶会');
+    expect(result).toContain('題名のないお茶会🎪');
     expect(result).toContain('【場所】World By Creator');
     expect(result.startsWith('test #あ茶会')).toBe(true);
   });
 
   it('supports multi-line free text', () => {
-    const result = buildStructuredTweet(template, 'line1\nline2', 'World', 'Creator', '🎻');
+    const result = buildStructuredTweet(template, 'line1\nline2', 'World', 'Creator', '🎻', '🏠');
     expect(result.startsWith('line1\nline2 #あ茶会')).toBe(true);
   });
 });
