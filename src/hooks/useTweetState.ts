@@ -103,7 +103,11 @@ export function validateTweet(
   const weeksDiff = Math.round(
     (tweetDate.getTime() - referenceDate.getTime()) / (7 * 24 * 60 * 60 * 1000),
   );
-  const expectedMeetingNumber = referenceMeetingNumber + weeksDiff;
+  let expectedMeetingNumber = referenceMeetingNumber + weeksDiff;
+  const skippedDate = new Date('2025-06-08');
+  if (tweetDate > skippedDate) {
+    expectedMeetingNumber -= 1;
+  }
   const meetingNumber = meetingMatch ? parseInt(meetingMatch[1]) : null;
   const isCorrectMeeting = meetingNumber === expectedMeetingNumber;
   const time = timeMatch
@@ -198,7 +202,11 @@ export function useTweetState() {
         (upcomingSunday.getTime() - referenceDate.getTime()) /
           (7 * 24 * 60 * 60 * 1000),
       );
-      const meetingNumber = referenceMeetingNumber + weeksDiff;
+      let meetingNumber = referenceMeetingNumber + weeksDiff;
+      const skippedDate = new Date('2025-06-08');
+      if (upcomingSunday > skippedDate) {
+        meetingNumber -= 1;
+      }
       const template =
         `自由文 #あ茶会\n\n` +
         `第${meetingNumber}回 ${instrumentEmoji}題名のないお茶会🏘️\n` +
