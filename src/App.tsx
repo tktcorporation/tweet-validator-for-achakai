@@ -26,6 +26,7 @@ function App() {
     handleEmojiCopy,
     handleTweetCopy,
     switchToStructuredMode,
+    clearStoredData,
     validation,
     tweetLength,
     maxTweetLength,
@@ -78,11 +79,17 @@ function App() {
                   Copied!
                 </span>
               )}
-              {validation.hasPlaceholders && (
-                <span className="mt-1 text-xs text-red-500">プレイスホルダーを埋めてください</span>
-              )}
-            </div>
+            {validation.hasPlaceholders && (
+              <span className="mt-1 text-xs text-red-500">プレイスホルダーを埋めてください</span>
+            )}
           </div>
+          <button
+            onClick={clearStoredData}
+            className="px-4 py-3 bg-brand-accent text-white rounded-lg hover:bg-opacity-85 transition-all duration-150 text-base font-medium shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-brand-accent"
+          >
+            入力をクリア
+          </button>
+        </div>
 
           {/* New Emoji Helper Section */}
           <div className="mb-4">
