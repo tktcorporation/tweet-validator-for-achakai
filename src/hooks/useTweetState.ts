@@ -150,18 +150,39 @@ export function validateTweet(
 }
 
 export function useTweetState() {
-  const [tweetText, setTweetText] = useState('');
+  let initialData: Partial<{
+    tweetText: string;
+    structuredMode: boolean;
+    freeText: string;
+    worldName: string;
+    creatorName: string;
+    instrumentEmoji: string;
+    suffixEmoji: string;
+    structuredTemplate: string[];
+  }> = {};
+  if (typeof window !== 'undefined') {
+    const stored = localStorage.getItem('tweet-state');
+    if (stored) {
+      try {
+        initialData = JSON.parse(stored);
+      } catch {
+        initialData = {};
+      }
+    }
+  }
+
+  const [tweetText, setTweetText] = useState(initialData.tweetText || '');
   const [charCount, setCharCount] = useState(0);
   const [animateCount, setAnimateCount] = useState(false);
   const [isLoadingSchedule, setIsLoadingSchedule] = useState(false);
   const [showCopyFeedbackFor, setShowCopyFeedbackFor] = useState<string | null>(null);
-  const [structuredMode, setStructuredMode] = useState(false);
-  const [freeText, setFreeText] = useState('');
-  const [worldName, setWorldName] = useState('');
-  const [creatorName, setCreatorName] = useState('');
-  const [instrumentEmoji, setInstrumentEmoji] = useState('🎸');
-  const [suffixEmoji, setSuffixEmoji] = useState('🏘️');
-  const [structuredTemplate, setStructuredTemplate] = useState<string[]>([]);
+  const [structuredMode, setStructuredMode] = useState(initialData.structuredMode || false);
+  const [freeText, setFreeText] = useState(initialData.freeText || '');
+  const [worldName, setWorldName] = useState(initialData.worldName || '');
+  const [creatorName, setCreatorName] = useState(initialData.creatorName || '');
+  const [instrumentEmoji, setInstrumentEmoji] = useState(initialData.instrumentEmoji || '🎸');
+  const [suffixEmoji, setSuffixEmoji] = useState(initialData.suffixEmoji || '🏘️');
+  const [structuredTemplate, setStructuredTemplate] = useState<string[]>(initialData.structuredTemplate || []);
 
   useEffect(() => {
     setCharCount(countTweetLength(tweetText));
@@ -184,6 +205,22 @@ export function useTweetState() {
       );
     }
   }, [freeText, worldName, creatorName, instrumentEmoji, suffixEmoji, structuredMode, structuredTemplate]);
+
+  useEffect(() => {
+    const data = {
+      tweetText,
+      structuredMode,
+      freeText,
+      worldName,
+      creatorName,
+      instrumentEmoji,
+      suffixEmoji,
+      structuredTemplate,
+    };
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('tweet-state', JSON.stringify(data));
+    }
+  }, [tweetText, structuredMode, freeText, worldName, creatorName, instrumentEmoji, suffixEmoji, structuredTemplate]);
 
   const referenceDate = new Date('2025-02-02');
   const referenceMeetingNumber = 208;
@@ -256,6 +293,20 @@ export function useTweetState() {
       .catch((err) => console.error('Failed to copy text: ', err));
   };
 
+  const clearStoredData = () => {
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('tweet-state');
+    }
+    setTweetText('');
+    setFreeText('');
+    setWorldName('');
+    setCreatorName('');
+    setInstrumentEmoji('🎸');
+    setSuffixEmoji('🏘️');
+    setStructuredTemplate([]);
+    setStructuredMode(false);
+  };
+
   const switchToStructuredMode = () => {
     const parsed = parseStructuredFields(tweetText);
     if (!parsed) {
@@ -299,6 +350,7 @@ export function useTweetState() {
     handleEmojiCopy,
     handleTweetCopy,
     switchToStructuredMode,
+    clearStoredData,
     validation,
     tweetLength,
     maxTweetLength,
