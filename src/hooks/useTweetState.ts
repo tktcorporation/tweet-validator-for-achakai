@@ -85,6 +85,8 @@ export function validateTweet(
   const hasValidLocation = locationMatch !== null;
   const placeholdersRegex = /(ワールド名|クリエイター名|自由文)/;
   const hasPlaceholders = placeholdersRegex.test(text);
+  const nightWordRegex = /(夜|宵|今宵|今夜)/;
+  const hasNightWord = nightWordRegex.test(text);
   if (!dateMatch) {
     return {
       isValid: false,
@@ -96,6 +98,7 @@ export function validateTweet(
       hasTime: false,
       hasValidLocation: false,
       hasPlaceholders,
+      hasNightWord,
       extractedInfo: {
         date: null,
         time: null,
@@ -139,6 +142,7 @@ export function validateTweet(
     hasTime: timeMatch !== null,
     hasValidLocation,
     hasPlaceholders,
+    hasNightWord,
     extractedInfo: {
       date: dateMatch ? `${month}月${day}日(日)` : null,
       time,
@@ -284,6 +288,14 @@ export function useTweetState() {
   };
 
   const handleTweetCopy = () => {
+    if (validation.hasNightWord) {
+      const confirmed = window.confirm(
+        'ツイートに夜を連想させる言葉が含まれていますが、このままコピーしますか？ (開催は昼の時間帯です)',
+      );
+      if (!confirmed) {
+        return;
+      }
+    }
     navigator.clipboard
       .writeText(tweetText)
       .then(() => {
