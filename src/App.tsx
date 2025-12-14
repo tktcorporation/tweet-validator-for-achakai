@@ -1,5 +1,14 @@
 import React from 'react';
-import { Calendar, Hash, CheckCircle, XCircle, Clock, MapPin, Loader2 } from 'lucide-react';
+import {
+  Calendar,
+  Hash,
+  CheckCircle,
+  XCircle,
+  Clock,
+  MapPin,
+  Loader2,
+  AlertTriangle,
+} from 'lucide-react';
 import useTweetState, { instrumentEmojiArray } from './hooks/useTweetState';
 
 function App() {
@@ -281,6 +290,14 @@ function App() {
                   )}
                 </div>
               </div>
+              {validation.hasNightWord && (
+                <div className="mt-4 p-3 rounded-lg flex items-center justify-center bg-yellow-400/20 text-yellow-700">
+                  <AlertTriangle className="w-5 h-5 inline-block mr-2" />
+                  <span className="text-sm font-medium">
+                    「夜」関連の言葉が含まれています。開催は昼ですが、意図通りですか？
+                  </span>
+                </div>
+              )}
               <div className="mt-6 p-4 rounded-lg text-center text-xl font-semibold flex items-center justify-center bg-brand-secondary/10 text-brand-secondary">
                 <XCircle className="w-7 h-7 inline-block mr-2" />
                 <span>ツイートに調整が必要です</span>
@@ -288,6 +305,14 @@ function App() {
             </>
           ) : (
             <>
+              {validation.hasNightWord && (
+                <div className="mb-4 p-3 rounded-lg flex items-center justify-center bg-yellow-400/20 text-yellow-700">
+                  <AlertTriangle className="w-5 h-5 inline-block mr-2" />
+                  <span className="text-sm font-medium">
+                    「夜」関連の言葉が含まれています。開催は昼ですが、意図通りですか？
+                  </span>
+                </div>
+              )}
               <div className="p-4 rounded-lg text-center text-xl font-semibold flex items-center justify-center bg-brand-primary/10 text-brand-primary mb-6">
                 <CheckCircle className="w-7 h-7 inline-block mr-2" />
                 <span>✨ ツイートは有効です！ ✨</span>
