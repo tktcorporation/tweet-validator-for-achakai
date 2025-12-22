@@ -1,0 +1,52 @@
+{
+  "image": "mcr.microsoft.com/devcontainers/base:bookworm",
+  "features": {
+    // "ghcr.io/devcontainers/features/docker-in-docker:2": {
+    //   "version": "latest",
+    //   "enableNonRootDocker": "true",
+    //   "moby": "true"
+    // },
+    "ghcr.io/devcontainers/features/aws-cli:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers-extra/features/mise:1": {}
+  },
+  "runArgs": ["--env-file", ".devcontainer/.env.devcontainer"],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "GitHub.copilot",
+        "mhutchie.git-graph",
+        "steoates.autoimport",
+        "editorconfig.editorconfig",
+        "WakaTime.vscode-wakatime",
+        "nemesv.copy-file-name"
+      ]
+    }
+  },
+  "onCreateCommand": {
+    "install-packages": [
+      "bash",
+      "-c",
+      "set -e; sudo apt-get update && sudo apt-get install -y build-essential fzf ripgrep bc gpg ca-certificates curl"
+    ]
+  },
+  "updateContentCommand": {
+    "add-node-gpg-key-mise": [
+      "bash",
+      "-c",
+      "set -e; curl -fsSL https://raw.githubusercontent.com/nodejs/release-keys/b362bd15f2ac7ce350d7563fc03e0c625e455e5f/cli.sh | bash -s import"
+    ],
+    "setup-mise-bash": ["bash", "-c", "echo 'eval \"$(mise activate bash)\"' >> ~/.bashrc"],
+    "trust-mise": ["mise", "trust"]
+  },
+  "postCreateCommand": {
+    "mise-install": "mise install"
+  },
+  "postStartCommand": {
+    "setup-chrome-devtools-mcp": [
+      "bash",
+      "-lc",
+      ".devcontainer/setup-chrome-devtools-mcp.sh"
+    ]
+  }
+}
