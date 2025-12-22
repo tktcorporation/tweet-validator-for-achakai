@@ -338,6 +338,11 @@ export function useTweetState() {
   const tweetLength = countTweetLength(tweetText);
   const maxTweetLength = 280;
 
+  // 期限切れ判定: 予定日付が今日より前なら期限切れ
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const isScheduleExpired = validation.date !== null && validation.date < today;
+
   return {
     tweetText,
     setTweetText,
@@ -366,6 +371,7 @@ export function useTweetState() {
     validation,
     tweetLength,
     maxTweetLength,
+    isScheduleExpired,
   };
 }
 

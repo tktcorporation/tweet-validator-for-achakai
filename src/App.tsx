@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Calendar,
   Hash,
@@ -8,6 +8,13 @@ import {
   MapPin,
   Loader2,
   AlertTriangle,
+  ChevronDown,
+  ChevronUp,
+  RefreshCw,
+  Copy,
+  Trash2,
+  Edit3,
+  Eye,
 } from 'lucide-react';
 import useTweetState, { instrumentEmojiArray } from './hooks/useTweetState';
 
@@ -39,163 +46,159 @@ function App() {
     validation,
     tweetLength,
     maxTweetLength,
+    isScheduleExpired,
   } = useTweetState();
 
+  const [isEmojiSectionOpen, setIsEmojiSectionOpen] = useState(false);
+
   return (
-    <div className="min-h-screen bg-neutral-ultralight py-16 px-6 sm:px-8 font-sans">
+    <div className="min-h-screen bg-neutral-ultralight py-8 px-4 sm:px-6 font-sans">
       <div className="max-w-2xl mx-auto">
-        <header className="text-center mb-12">
-          <h1 className="text-4xl font-extrabold text-brand-primary"> {/* Changed text-5xl to text-4xl */}
+        {/* Header */}
+        <header className="text-center mb-8">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-brand-primary">
             あ茶会 Tweet Validator
           </h1>
         </header>
-        
-        <section className="bg-neutral-light rounded-xl shadow-2xl p-6 md:p-8 mb-8"> {/* Adjusted padding and mb */}
-          <label htmlFor="tweetTextArea" className="block text-lg font-semibold text-neutral-dark mb-3">
-            ツイートテキスト
-          </label>
-          <div className="flex flex-wrap gap-2 mb-4">
-            <button
-              onClick={generateThisWeeksSchedule}
-              disabled={isLoadingSchedule}
-              className="px-6 py-3 bg-brand-primary text-white rounded-lg hover:bg-opacity-85 transition-all duration-150 text-base font-medium shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-brand-accent focus:ring-opacity-75 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center"
-            >
-              {isLoadingSchedule ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  生成中...
-                </>
-              ) : (
-                '今週の予定を生成'
-              )}
-            </button>
-            <button
-              onClick={structuredMode ? () => setStructuredMode(false) : switchToStructuredMode}
-              className="px-4 py-3 bg-brand-secondary text-white rounded-lg hover:bg-opacity-85 transition-all duration-150 text-base font-medium shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-brand-accent"
-            >
-              {structuredMode ? '直接編集へ' : '項目ごとに編集'}
-            </button>
-            <div className="flex flex-col items-center relative">
+
+        {/* Expired Schedule Banner */}
+        {isScheduleExpired && (
+          <section className="mb-6 bg-amber-50 border-2 border-amber-400 rounded-xl p-4 shadow-lg">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 w-10 h-10 bg-amber-400 rounded-full flex items-center justify-center">
+                <AlertTriangle className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex-1">
+                <h2 className="text-lg font-bold text-amber-800 mb-1">
+                  前回の開催は終了しました
+                </h2>
+                <p className="text-sm text-amber-700 mb-3">
+                  {validation.extractedInfo.date} の予定が残っています。次の開催予定を作成しましょう。
+                </p>
+                <button
+                  onClick={generateThisWeeksSchedule}
+                  disabled={isLoadingSchedule}
+                  className="px-5 py-2.5 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-all duration-150 text-sm font-semibold shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed flex items-center"
+                >
+                  {isLoadingSchedule ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      生成中...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      次の予定を設定する
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Main Input Section */}
+        <section className="bg-white rounded-xl shadow-lg p-5 sm:p-6 mb-6">
+          {/* Section Header with Primary Action */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+            <h2 className="text-lg font-bold text-neutral-dark">ツイート作成</h2>
+            {!isScheduleExpired && (
               <button
-                onClick={handleTweetCopy}
-                disabled={validation.hasPlaceholders}
-                className="px-4 py-3 bg-neutral-medium text-white rounded-lg hover:bg-opacity-85 transition-all duration-150 text-base font-medium shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-brand-accent disabled:opacity-70 disabled:cursor-not-allowed"
+                onClick={generateThisWeeksSchedule}
+                disabled={isLoadingSchedule}
+                className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-opacity-90 transition-all duration-150 text-sm font-medium shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center"
               >
-                全文コピー
+                {isLoadingSchedule ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    生成中...
+                  </>
+                ) : (
+                  <>
+                    <Calendar className="w-4 h-4 mr-2" />
+                    今週の予定を生成
+                  </>
+                )}
               </button>
-              {showCopyFeedbackFor === 'tweet' && (
-                <span className="absolute -top-7 left-1/2 -translate-x-1/2 text-xs bg-neutral-dark text-white px-2 py-0.5 rounded-md shadow-lg whitespace-nowrap z-10">
-                  Copied!
-                </span>
-              )}
-            {validation.hasPlaceholders && (
-              <span className="mt-1 text-xs text-red-500">プレイスホルダーを埋めてください</span>
             )}
           </div>
-          <button
-            onClick={clearStoredData}
-            className="px-4 py-3 bg-brand-accent text-white rounded-lg hover:bg-opacity-85 transition-all duration-150 text-base font-medium shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-brand-accent"
-          >
-            入力をクリア
-          </button>
-        </div>
 
-          {/* New Emoji Helper Section */}
-          <div className="mb-4">
-            <span className="text-sm font-semibold text-neutral-dark mb-1">楽器絵文字:</span>
-            <div className="flex overflow-x-auto gap-2 py-2 scrollbar-thin scrollbar-thumb-neutral-medium/50 scrollbar-track-neutral-light">
-          {instrumentEmojiArray.map((emoji, index) => (
-            <div key={index} className="relative">
-              <button
-                onClick={() => {
-                  setInstrumentEmoji(emoji);
-                  handleEmojiCopy(emoji);
-                }}
-                className="p-1.5 text-xl bg-white rounded-md shadow-sm hover:bg-neutral-medium/20 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-brand-accent"
-                aria-label={`Select emoji ${emoji}`}
-              >
-                {emoji}
-              </button>
-              {showCopyFeedbackFor === emoji && (
-                <span className="absolute -top-7 left-1/2 -translate-x-1/2 text-xs bg-neutral-dark text-white px-2 py-0.5 rounded-md shadow-lg whitespace-nowrap z-10">
-                  Copied!
-                </span>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
+          {/* Edit Mode Toggle */}
+          <div className="flex items-center gap-2 mb-4 p-1 bg-neutral-light rounded-lg">
+            <button
+              onClick={() => {
+                if (structuredMode) switchToStructuredMode();
+                setStructuredMode(false);
+              }}
+              className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-all duration-150 flex items-center justify-center gap-2 ${
+                !structuredMode
+                  ? 'bg-white text-neutral-dark shadow-sm'
+                  : 'text-neutral-medium hover:text-neutral-dark'
+              }`}
+            >
+              <Edit3 className="w-4 h-4" />
+              直接編集
+            </button>
+            <button
+              onClick={() => {
+                if (!structuredMode) switchToStructuredMode();
+              }}
+              className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-all duration-150 flex items-center justify-center gap-2 ${
+                structuredMode
+                  ? 'bg-white text-neutral-dark shadow-sm'
+                  : 'text-neutral-medium hover:text-neutral-dark'
+              }`}
+            >
+              <Eye className="w-4 h-4" />
+              項目ごと編集
+            </button>
+          </div>
 
-          <div className="mb-4">
-            <span className="text-sm font-semibold text-neutral-dark mb-1">他の絵文字:</span>
-            <div className="flex overflow-x-auto gap-2 py-2 scrollbar-thin scrollbar-thumb-neutral-medium/50 scrollbar-track-neutral-light">
-              {instrumentEmojiArray.map((emoji, index) => (
-                <div key={index} className="relative">
-                  <button
-                    onClick={() => {
-                      setSuffixEmoji(emoji);
-                      handleEmojiCopy(emoji);
-                    }}
-                    className="p-1.5 text-xl bg-white rounded-md shadow-sm hover:bg-neutral-medium/20 transition-colors duration-150 focus:outline-none focus:ring-2 focus:ring-brand-accent"
-                    aria-label={`Select emoji ${emoji}`}
-                  >
-                    {emoji}
-                  </button>
-                  {showCopyFeedbackFor === emoji && (
-                    <span className="absolute -top-7 left-1/2 -translate-x-1/2 text-xs bg-neutral-dark text-white px-2 py-0.5 rounded-md shadow-lg whitespace-nowrap z-10">
-                      Copied!
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-          
-          <div className="mb-2 text-sm text-right text-neutral-dark"> {/* Adjusted mb */}
-             <span className={`font-mono ${animateCount ? 'animate-pulse-fade' : ''}`}>文字数: {charCount}</span>
-          </div>
+          {/* Input Area */}
           {structuredMode ? (
             <div className="space-y-4">
               <div>
-                <label htmlFor="freeTextInput" className="block text-sm font-semibold text-neutral-dark mb-1">
+                <label htmlFor="freeTextInput" className="block text-sm font-medium text-neutral-dark mb-1.5">
                   自由文
                 </label>
                 <textarea
                   id="freeTextInput"
                   value={freeText}
                   onChange={(e) => setFreeText(e.target.value)}
-                  className="w-full p-2 h-24 border border-neutral-medium rounded-md focus:ring-2 focus:ring-brand-accent focus:border-brand-accent"
-                  placeholder="自由文"
+                  className="w-full p-3 h-20 border border-neutral-medium/50 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all"
+                  placeholder="今回のお茶会の一言コメントなど..."
                 />
               </div>
-              <div>
-                <label htmlFor="instrumentEmojiInput" className="block text-sm font-semibold text-neutral-dark mb-1">
-                  お茶会絵文字
-                </label>
-                <input
-                  id="instrumentEmojiInput"
-                  type="text"
-                  value={instrumentEmoji}
-                  onChange={(e) => setInstrumentEmoji(e.target.value)}
-                  className="w-full p-2 border border-neutral-medium rounded-md focus:ring-2 focus:ring-brand-accent focus:border-brand-accent"
-                  placeholder="🎸"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label htmlFor="instrumentEmojiInput" className="block text-sm font-medium text-neutral-dark mb-1.5">
+                    お茶会絵文字
+                  </label>
+                  <input
+                    id="instrumentEmojiInput"
+                    type="text"
+                    value={instrumentEmoji}
+                    onChange={(e) => setInstrumentEmoji(e.target.value)}
+                    className="w-full p-3 border border-neutral-medium/50 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary text-center text-xl"
+                    placeholder="🎸"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="suffixEmojiInput" className="block text-sm font-medium text-neutral-dark mb-1.5">
+                    後ろの絵文字
+                  </label>
+                  <input
+                    id="suffixEmojiInput"
+                    type="text"
+                    value={suffixEmoji}
+                    onChange={(e) => setSuffixEmoji(e.target.value)}
+                    className="w-full p-3 border border-neutral-medium/50 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary text-center text-xl"
+                    placeholder="🏘️"
+                  />
+                </div>
               </div>
               <div>
-                <label htmlFor="suffixEmojiInput" className="block text-sm font-semibold text-neutral-dark mb-1">
-                  後ろの絵文字
-                </label>
-                <input
-                  id="suffixEmojiInput"
-                  type="text"
-                  value={suffixEmoji}
-                  onChange={(e) => setSuffixEmoji(e.target.value)}
-                  className="w-full p-2 border border-neutral-medium rounded-md focus:ring-2 focus:ring-brand-accent focus:border-brand-accent"
-                  placeholder="🏘️"
-                />
-              </div>
-              <div>
-                <label htmlFor="worldNameInput" className="block text-sm font-semibold text-neutral-dark mb-1">
+                <label htmlFor="worldNameInput" className="block text-sm font-medium text-neutral-dark mb-1.5">
                   ワールド名
                 </label>
                 <input
@@ -203,12 +206,12 @@ function App() {
                   type="text"
                   value={worldName}
                   onChange={(e) => setWorldName(e.target.value)}
-                  className="w-full p-2 border border-neutral-medium rounded-md focus:ring-2 focus:ring-brand-accent focus:border-brand-accent"
-                  placeholder="ワールド名"
+                  className="w-full p-3 border border-neutral-medium/50 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                  placeholder="開催場所のワールド名"
                 />
               </div>
               <div>
-                <label htmlFor="creatorNameInput" className="block text-sm font-semibold text-neutral-dark mb-1">
+                <label htmlFor="creatorNameInput" className="block text-sm font-medium text-neutral-dark mb-1.5">
                   クリエイター名
                 </label>
                 <input
@@ -216,19 +219,19 @@ function App() {
                   type="text"
                   value={creatorName}
                   onChange={(e) => setCreatorName(e.target.value)}
-                  className="w-full p-2 border border-neutral-medium rounded-md focus:ring-2 focus:ring-brand-accent focus:border-brand-accent"
-                  placeholder="クリエイター名"
+                  className="w-full p-3 border border-neutral-medium/50 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                  placeholder="ワールド作成者の名前"
                 />
               </div>
               <div>
-                <label htmlFor="tweetTemplate" className="block text-sm font-semibold text-neutral-dark mb-1">
-                  生成されたテンプレート
+                <label htmlFor="tweetTemplate" className="block text-sm font-medium text-neutral-dark mb-1.5">
+                  プレビュー
                 </label>
                 <textarea
                   id="tweetTemplate"
                   readOnly
                   value={tweetText}
-                  className="w-full h-48 p-3 border border-neutral-medium rounded-lg bg-neutral-ultralight text-neutral-dark text-base shadow-sm"
+                  className="w-full h-40 p-3 border border-neutral-medium/30 rounded-lg bg-neutral-light/50 text-neutral-dark text-sm"
                 />
               </div>
             </div>
@@ -237,112 +240,240 @@ function App() {
               id="tweetTextArea"
               value={tweetText}
               onChange={(e) => setTweetText(e.target.value)}
-              className={`w-full h-48 p-3 border rounded-lg focus:ring-2 focus:ring-brand-accent focus:border-brand-accent bg-white text-neutral-dark text-base shadow-sm ${validation.hasPlaceholders ? 'border-red-500' : 'border-neutral-medium'}`}
+              className={`w-full h-48 p-3 border rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary bg-white text-neutral-dark text-sm transition-all ${
+                validation.hasPlaceholders ? 'border-red-400' : 'border-neutral-medium/50'
+              }`}
               placeholder="ここにツイートを入力してください..."
             />
           )}
-          <div
-            className={`mt-2 text-sm text-right font-medium ${ // Adjusted mt
-              tweetLength > maxTweetLength ? 'text-red-500' : 'text-neutral-medium'
-            }`}
-          >
-            {tweetLength} / {maxTweetLength}
+
+          {/* Character Count */}
+          <div className="flex justify-between items-center mt-3">
+            <span className={`text-sm font-mono ${animateCount ? 'animate-pulse-fade' : ''} text-neutral-medium`}>
+              文字数: {charCount}
+            </span>
+            <span
+              className={`text-sm font-mono ${
+                tweetLength > maxTweetLength ? 'text-red-500 font-semibold' : 'text-neutral-medium'
+              }`}
+            >
+              {tweetLength} / {maxTweetLength}
+            </span>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-neutral-medium/20">
+            <div className="relative">
+              <button
+                onClick={handleTweetCopy}
+                disabled={validation.hasPlaceholders}
+                className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-opacity-90 transition-all duration-150 text-sm font-medium shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+              >
+                <Copy className="w-4 h-4 mr-2" />
+                全文コピー
+              </button>
+              {showCopyFeedbackFor === 'tweet' && (
+                <span className="absolute -top-8 left-1/2 -translate-x-1/2 text-xs bg-neutral-dark text-white px-2 py-1 rounded-md shadow-lg whitespace-nowrap z-10">
+                  Copied!
+                </span>
+              )}
+            </div>
+            <button
+              onClick={clearStoredData}
+              className="px-4 py-2 bg-neutral-light text-neutral-dark rounded-lg hover:bg-neutral-medium/30 transition-all duration-150 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-neutral-medium focus:ring-offset-2 flex items-center"
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              クリア
+            </button>
+            {validation.hasPlaceholders && (
+              <span className="flex items-center text-xs text-red-500 ml-2">
+                プレイスホルダーを埋めてください
+              </span>
+            )}
           </div>
         </section>
 
-        {/* Dynamic Validation Results & Extracted Information Section */}
-        <div className="bg-neutral-light rounded-xl shadow-2xl p-4 md:p-6 mt-8"> {/* Adjusted padding and mt */}
+        {/* Emoji Picker Section (Collapsible) */}
+        <section className="bg-white rounded-xl shadow-lg mb-6 overflow-hidden">
+          <button
+            onClick={() => setIsEmojiSectionOpen(!isEmojiSectionOpen)}
+            className="w-full px-5 py-3 flex items-center justify-between text-left hover:bg-neutral-light/50 transition-colors"
+          >
+            <span className="text-sm font-medium text-neutral-dark">絵文字を選択</span>
+            {isEmojiSectionOpen ? (
+              <ChevronUp className="w-5 h-5 text-neutral-medium" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-neutral-medium" />
+            )}
+          </button>
+          {isEmojiSectionOpen && (
+            <div className="px-5 pb-4 space-y-4">
+              <div>
+                <span className="text-xs font-medium text-neutral-medium uppercase tracking-wide">お茶会絵文字</span>
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {instrumentEmojiArray.map((emoji, index) => (
+                    <div key={index} className="relative">
+                      <button
+                        onClick={() => {
+                          setInstrumentEmoji(emoji);
+                          handleEmojiCopy(emoji);
+                        }}
+                        className={`p-2 text-xl rounded-lg transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-brand-primary ${
+                          instrumentEmoji === emoji
+                            ? 'bg-brand-primary/10 ring-2 ring-brand-primary'
+                            : 'bg-neutral-light hover:bg-neutral-medium/20'
+                        }`}
+                        aria-label={`Select emoji ${emoji}`}
+                      >
+                        {emoji}
+                      </button>
+                      {showCopyFeedbackFor === emoji && (
+                        <span className="absolute -top-7 left-1/2 -translate-x-1/2 text-xs bg-neutral-dark text-white px-2 py-0.5 rounded-md shadow-lg whitespace-nowrap z-10">
+                          Copied!
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <span className="text-xs font-medium text-neutral-medium uppercase tracking-wide">後ろの絵文字</span>
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {instrumentEmojiArray.map((emoji, index) => (
+                    <div key={index} className="relative">
+                      <button
+                        onClick={() => {
+                          setSuffixEmoji(emoji);
+                          handleEmojiCopy(emoji);
+                        }}
+                        className={`p-2 text-xl rounded-lg transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-brand-primary ${
+                          suffixEmoji === emoji
+                            ? 'bg-brand-primary/10 ring-2 ring-brand-primary'
+                            : 'bg-neutral-light hover:bg-neutral-medium/20'
+                        }`}
+                        aria-label={`Select emoji ${emoji}`}
+                      >
+                        {emoji}
+                      </button>
+                      {showCopyFeedbackFor === emoji && (
+                        <span className="absolute -top-7 left-1/2 -translate-x-1/2 text-xs bg-neutral-dark text-white px-2 py-0.5 rounded-md shadow-lg whitespace-nowrap z-10">
+                          Copied!
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* Validation Results Section */}
+        <section className="bg-white rounded-xl shadow-lg p-5 sm:p-6">
           {!validation.isValid ? (
             <>
-              <h2 className="text-2xl font-bold text-brand-secondary mb-6 text-center">検証結果</h2>
-              <div className="space-y-3">
-                {[ 
+              <h2 className="text-lg font-bold text-neutral-dark mb-4 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-brand-secondary" />
+                検証結果
+              </h2>
+              <div className="space-y-2">
+                {[
                   { Icon: Calendar, label: "日曜日の日付", isValid: validation.isSunday, dataTestId: "validation-date" },
                   { Icon: Clock, label: "時間が含まれている", isValid: validation.hasTime, dataTestId: "validation-time" },
-                  { Icon: MapPin, label: "有効な場所形式が含まれている", isValid: validation.hasValidLocation, dataTestId: "validation-location" },
-                  { Icon: Hash, label: "#あ茶会 ハッシュタグが含まれている", isValid: validation.hasHashtag, dataTestId: "validation-hashtag" },
-                  { Icon: Hash, label: "プレイスホルダーが残っていない", isValid: !validation.hasPlaceholders, dataTestId: "validation-placeholder" },
+                  { Icon: MapPin, label: "有効な場所形式", isValid: validation.hasValidLocation, dataTestId: "validation-location" },
+                  { Icon: Hash, label: "#あ茶会 ハッシュタグ", isValid: validation.hasHashtag, dataTestId: "validation-hashtag" },
+                  { Icon: Edit3, label: "プレイスホルダーなし", isValid: !validation.hasPlaceholders, dataTestId: "validation-placeholder" },
                 ].map(({ Icon, label, isValid, dataTestId }) => (
-                  <div key={label} data-testid={dataTestId} className="flex items-center justify-between py-2 border-b border-neutral-medium/30">
+                  <div
+                    key={label}
+                    data-testid={dataTestId}
+                    className={`flex items-center justify-between py-2.5 px-3 rounded-lg ${
+                      isValid ? 'bg-green-50' : 'bg-red-50'
+                    }`}
+                  >
                     <div className="flex items-center gap-2">
-                      <Icon className="w-5 h-5 text-brand-primary" />
+                      <Icon className={`w-4 h-4 ${isValid ? 'text-green-600' : 'text-red-500'}`} />
                       <span className="text-neutral-dark text-sm">{label}</span>
                     </div>
-                    {isValid ? 
-                      <CheckCircle className="w-6 h-6 text-green-500" /> : 
-                      <XCircle className="w-6 h-6 text-red-500" />
-                    }
+                    {isValid ? (
+                      <CheckCircle className="w-5 h-5 text-green-500" />
+                    ) : (
+                      <XCircle className="w-5 h-5 text-red-500" />
+                    )}
                   </div>
                 ))}
-                <div data-testid="validation-meeting-number" className="flex items-center justify-between py-2 border-b border-neutral-medium/30">
+                <div
+                  data-testid="validation-meeting-number"
+                  className={`flex items-center justify-between py-2.5 px-3 rounded-lg ${
+                    validation.isCorrectMeeting ? 'bg-green-50' : 'bg-red-50'
+                  }`}
+                >
                   <div className="flex items-center gap-2">
-                    <span className="w-5 h-5 flex items-center justify-center font-bold text-brand-primary text-lg">#</span>
+                    <span className={`w-4 h-4 flex items-center justify-center font-bold text-sm ${
+                      validation.isCorrectMeeting ? 'text-green-600' : 'text-red-500'
+                    }`}>#</span>
                     <span className="text-neutral-dark text-sm">開催回数</span>
                   </div>
                   {validation.isCorrectMeeting ? (
-                    <CheckCircle className="w-6 h-6 text-green-500" />
+                    <CheckCircle className="w-5 h-5 text-green-500" />
                   ) : (
-                    <span className="text-xs text-red-500 font-medium ml-auto pl-2">
+                    <span className="text-xs text-red-500 font-medium">
                       {validation.meetingNumber !== null
-                        ? `第${validation.expectedMeetingNumber}回であるべきです`
-                        : '開催回数が欠落しています'}
+                        ? `第${validation.expectedMeetingNumber}回であるべき`
+                        : '欠落'}
                     </span>
                   )}
                 </div>
               </div>
               {validation.hasNightWord && (
-                <div className="mt-4 p-3 rounded-lg flex items-center justify-center bg-yellow-400/20 text-yellow-700">
-                  <AlertTriangle className="w-5 h-5 inline-block mr-2" />
-                  <span className="text-sm font-medium">
+                <div className="mt-4 p-3 rounded-lg flex items-center bg-yellow-50 border border-yellow-200">
+                  <AlertTriangle className="w-5 h-5 text-yellow-600 mr-2 flex-shrink-0" />
+                  <span className="text-sm text-yellow-800">
                     「夜」関連の言葉が含まれています。開催は昼ですが、意図通りですか？
                   </span>
                 </div>
               )}
-              <div className="mt-6 p-4 rounded-lg text-center text-xl font-semibold flex items-center justify-center bg-brand-secondary/10 text-brand-secondary">
-                <XCircle className="w-7 h-7 inline-block mr-2" />
-                <span>ツイートに調整が必要です</span>
+              <div className="mt-5 p-4 rounded-lg text-center bg-red-50 border border-red-200">
+                <div className="flex items-center justify-center gap-2 text-red-600 font-semibold">
+                  <XCircle className="w-5 h-5" />
+                  <span>ツイートに調整が必要です</span>
+                </div>
               </div>
             </>
           ) : (
             <>
               {validation.hasNightWord && (
-                <div className="mb-4 p-3 rounded-lg flex items-center justify-center bg-yellow-400/20 text-yellow-700">
-                  <AlertTriangle className="w-5 h-5 inline-block mr-2" />
-                  <span className="text-sm font-medium">
+                <div className="mb-4 p-3 rounded-lg flex items-center bg-yellow-50 border border-yellow-200">
+                  <AlertTriangle className="w-5 h-5 text-yellow-600 mr-2 flex-shrink-0" />
+                  <span className="text-sm text-yellow-800">
                     「夜」関連の言葉が含まれています。開催は昼ですが、意図通りですか？
                   </span>
                 </div>
               )}
-              <div className="p-4 rounded-lg text-center text-xl font-semibold flex items-center justify-center bg-brand-primary/10 text-brand-primary mb-6">
-                <CheckCircle className="w-7 h-7 inline-block mr-2" />
-                <span>✨ ツイートは有効です！ ✨</span>
+              <div className="p-4 rounded-lg text-center bg-green-50 border border-green-200 mb-5">
+                <div className="flex items-center justify-center gap-2 text-green-600 font-semibold">
+                  <CheckCircle className="w-5 h-5" />
+                  <span>ツイートは有効です</span>
+                </div>
               </div>
-              <h3 className="text-lg font-bold text-neutral-dark mb-3">抽出された情報:</h3>
-              <dl className="space-y-2 text-sm"> {/* Adjusted space and text size */}
-                <div className="flex gap-2 items-baseline">
-                  <dt className="font-bold text-neutral-dark w-24 shrink-0">会議:</dt>
-                  <dd className="text-neutral-dark flex-1">{validation.extractedInfo.meetingNumber}</dd>
-                </div>
-                <div className="flex gap-2 items-baseline">
-                  <dt className="font-bold text-neutral-dark w-24 shrink-0">日付:</dt>
-                  <dd className="text-neutral-dark flex-1">{validation.extractedInfo.date}</dd>
-                </div>
-                <div className="flex gap-2 items-baseline">
-                  <dt className="font-bold text-neutral-dark w-24 shrink-0">時間:</dt>
-                  <dd className="text-neutral-dark flex-1">{validation.extractedInfo.time}</dd>
-                </div>
-                <div className="flex gap-2 items-baseline">
-                  <dt className="font-bold text-neutral-dark w-24 shrink-0">ワールド:</dt>
-                  <dd className="text-neutral-dark flex-1">{validation.extractedInfo.worldName}</dd>
-                </div>
-                <div className="flex gap-2 items-baseline">
-                  <dt className="font-bold text-neutral-dark w-24 shrink-0">クリエイター:</dt>
-                  <dd className="text-neutral-dark flex-1">{validation.extractedInfo.creator}</dd>
-                </div>
+              <h3 className="text-sm font-semibold text-neutral-dark mb-3 uppercase tracking-wide">抽出された情報</h3>
+              <dl className="space-y-2 text-sm bg-neutral-light/50 rounded-lg p-4">
+                {[
+                  { label: '開催回数', value: validation.extractedInfo.meetingNumber },
+                  { label: '日付', value: validation.extractedInfo.date },
+                  { label: '時間', value: validation.extractedInfo.time },
+                  { label: 'ワールド', value: validation.extractedInfo.worldName },
+                  { label: 'クリエイター', value: validation.extractedInfo.creator },
+                ].map(({ label, value }) => (
+                  <div key={label} className="flex gap-3">
+                    <dt className="font-medium text-neutral-medium w-24 flex-shrink-0">{label}</dt>
+                    <dd className="text-neutral-dark">{value || '-'}</dd>
+                  </div>
+                ))}
               </dl>
             </>
           )}
-        </div>
+        </section>
       </div>
     </div>
   );
