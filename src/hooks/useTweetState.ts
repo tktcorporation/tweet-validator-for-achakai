@@ -68,10 +68,15 @@ export function buildStructuredTweet(
     .join('\n');
 }
 
+// Dates when the event is skipped (holidays)
+export const skippedDates = [
+  new Date('2026-01-25'),
+];
+
 export function validateTweet(
   text: string,
-  referenceDate = new Date('2025-02-02'),
-  referenceMeetingNumber = 208,
+  referenceDate = new Date('2026-01-11'),
+  referenceMeetingNumber = 254,
   currentDate: Date = new Date(),
 ) {
   const meetingRegex = /第(\d+)回/;
@@ -127,10 +132,11 @@ export function validateTweet(
     (tweetDate.getTime() - referenceDate.getTime()) / (7 * 24 * 60 * 60 * 1000),
   );
   let expectedMeetingNumber = referenceMeetingNumber + weeksDiff;
-  const skippedDate = new Date('2025-06-08');
-  if (tweetDate > skippedDate) {
-    expectedMeetingNumber -= 1;
-  }
+  // Count skipped dates between reference date and tweet date
+  const skippedCount = skippedDates.filter(d => {
+    return d > referenceDate && d <= tweetDate;
+  }).length;
+  expectedMeetingNumber -= skippedCount;
   const meetingNumber = meetingMatch ? parseInt(meetingMatch[1]) : null;
   const isCorrectMeeting = meetingNumber === expectedMeetingNumber;
   const time = timeMatch
@@ -237,8 +243,8 @@ export function useTweetState() {
     }
   }, [tweetText, structuredMode, freeText, worldName, creatorName, instrumentEmoji, suffixEmoji, structuredTemplate]);
 
-  const referenceDate = new Date('2025-02-02');
-  const referenceMeetingNumber = 208;
+  const referenceDate = new Date('2026-01-11');
+  const referenceMeetingNumber = 254;
 
   const generateThisWeeksSchedule = () => {
     if (
@@ -266,10 +272,11 @@ export function useTweetState() {
           (7 * 24 * 60 * 60 * 1000),
       );
       let meetingNumber = referenceMeetingNumber + weeksDiff;
-      const skippedDate = new Date('2025-06-08');
-      if (upcomingSunday > skippedDate) {
-        meetingNumber -= 1;
-      }
+      // Count skipped dates between reference date and upcoming Sunday
+      const skippedCount = skippedDates.filter(d => {
+        return d > referenceDate && d <= upcomingSunday;
+      }).length;
+      meetingNumber -= skippedCount;
       const template =
         `自由文 #あ茶会\n\n` +
         `第${meetingNumber}回 ${instrumentEmoji}題名のないお茶会${suffixEmoji}\n` +
