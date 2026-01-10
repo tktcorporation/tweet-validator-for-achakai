@@ -72,6 +72,7 @@ export function validateTweet(
   text: string,
   referenceDate = new Date('2025-02-02'),
   referenceMeetingNumber = 208,
+  currentDate: Date = new Date(),
 ) {
   const meetingRegex = /第(\d+)回/;
   const meetingMatch = text.match(meetingRegex);
@@ -110,7 +111,17 @@ export function validateTweet(
   }
   const month = parseInt(dateMatch[1]);
   const day = parseInt(dateMatch[2]);
-  const tweetDate = new Date(2025, month - 1, day);
+  // Determine year dynamically: if the date has passed this year, assume next year
+  const now = currentDate;
+  const currentYear = now.getFullYear();
+  let tweetYear = currentYear;
+  const candidateThisYear = new Date(currentYear, month - 1, day);
+  // If the date is more than a week in the past, assume next year
+  const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+  if (candidateThisYear < oneWeekAgo) {
+    tweetYear = currentYear + 1;
+  }
+  const tweetDate = new Date(tweetYear, month - 1, day);
   const isSunday = tweetDate.getDay() === 0;
   const weeksDiff = Math.round(
     (tweetDate.getTime() - referenceDate.getTime()) / (7 * 24 * 60 * 60 * 1000),
