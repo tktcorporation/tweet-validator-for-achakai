@@ -62,4 +62,53 @@ describe('validateTweet', () => {
     const result = validateTweet(text);
     expect(result.hasNightWord).toBe(false);
   });
+
+  describe('year calculation', () => {
+    it('correctly identifies Jan 11 2026 as Sunday when current date is Jan 10 2026', () => {
+      // Jan 11, 2026 is a Sunday, meeting #256
+      const tweet =
+        'テスト #あ茶会\n\n第256回 🎸題名のないお茶会🏘️\n【日時】1月11日(日) 14:30〜16:00\n【場所】TestWorld By Creator\n【参加方法】Group＋「題名のないお茶会」にjoin';
+      const currentDate = new Date('2026-01-10');
+      const result = validateTweet(tweet, new Date('2025-02-02'), 208, currentDate);
+      expect(result.isSunday).toBe(true);
+      expect(result.expectedMeetingNumber).toBe(256);
+      expect(result.isCorrectMeeting).toBe(true);
+      expect(result.isValid).toBe(true);
+    });
+
+    it('uses next year for dates that have passed this year', () => {
+      // If current date is Dec 2025, and tweet says "1月11日(日)", it should use Jan 11, 2026
+      const tweet =
+        'テスト #あ茶会\n\n第256回 🎸題名のないお茶会🏘️\n【日時】1月11日(日) 14:30〜16:00\n【場所】TestWorld By Creator\n【参加方法】Group＋「題名のないお茶会」にjoin';
+      const currentDate = new Date('2025-12-20');
+      const result = validateTweet(tweet, new Date('2025-02-02'), 208, currentDate);
+      expect(result.isSunday).toBe(true);
+      expect(result.expectedMeetingNumber).toBe(256);
+      expect(result.isCorrectMeeting).toBe(true);
+    });
+
+    it('correctly validates reference date Feb 2 2025 as meeting #208', () => {
+      const tweet =
+        'テスト #あ茶会\n\n第208回 🎸題名のないお茶会🏘️\n【日時】2月2日(日) 14:30〜16:00\n【場所】TestWorld By Creator\n【参加方法】Group＋「題名のないお茶会」にjoin';
+      // Test with a date in early 2025 so Feb 2 is in the future
+      const currentDate = new Date('2025-01-15');
+      const result = validateTweet(tweet, new Date('2025-02-02'), 208, currentDate);
+      expect(result.isSunday).toBe(true);
+      expect(result.expectedMeetingNumber).toBe(208);
+      expect(result.isCorrectMeeting).toBe(true);
+    });
+
+    it('accounts for skipped meeting on June 8 2025', () => {
+      // June 15, 2025 is a Sunday, and is after the skipped date
+      // Weeks from Feb 2 to June 15 = 19 weeks
+      // Expected: 208 + 19 - 1 (skip) = 226
+      const tweet =
+        'テスト #あ茶会\n\n第226回 🎸題名のないお茶会🏘️\n【日時】6月15日(日) 14:30〜16:00\n【場所】TestWorld By Creator\n【参加方法】Group＋「題名のないお茶会」にjoin';
+      const currentDate = new Date('2025-06-01');
+      const result = validateTweet(tweet, new Date('2025-02-02'), 208, currentDate);
+      expect(result.isSunday).toBe(true);
+      expect(result.expectedMeetingNumber).toBe(226);
+      expect(result.isCorrectMeeting).toBe(true);
+    });
+  });
 });
