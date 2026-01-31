@@ -66,37 +66,52 @@ describe('validateTweet', () => {
   });
 
   describe('year calculation', () => {
-    it('correctly identifies Jan 11 2026 as Sunday and meeting #254', () => {
-      // Jan 11, 2026 is a Sunday, meeting #254 (new reference)
+    it('correctly identifies Dec 21 2025 as Sunday and meeting #253', () => {
+      // Dec 21, 2025 is a Sunday, meeting #253 (reference)
       const tweet =
-        'テスト #あ茶会\n\n第254回 🎸題名のないお茶会🏘️\n【日時】1月11日(日) 14:30〜16:00\n【場所】TestWorld By Creator\n【参加方法】Group＋「題名のないお茶会」にjoin';
-      const currentDate = new Date('2026-01-10');
-      const result = validateTweet(tweet, new Date('2026-01-11'), 254, currentDate);
+        'テスト #あ茶会\n\n第253回 🎸題名のないお茶会🏘️\n【日時】12月21日(日) 14:30〜16:00\n【場所】TestWorld By Creator\n【参加方法】Group＋「題名のないお茶会」にjoin';
+      const currentDate = new Date('2025-12-20');
+      const result = validateTweet(tweet, new Date('2025-12-21'), 253, currentDate);
       expect(result.isSunday).toBe(true);
-      expect(result.expectedMeetingNumber).toBe(254);
+      expect(result.expectedMeetingNumber).toBe(253);
       expect(result.isCorrectMeeting).toBe(true);
       expect(result.isValid).toBe(true);
     });
 
+    it('correctly calculates meeting #254 for Jan 11 2026 (skipping 12/28 and 1/4)', () => {
+      // Jan 11, 2026 is a Sunday
+      // Weeks from Dec 21 to Jan 11 = 3 weeks
+      // Expected: 253 + 3 - 2 (Dec 28 + Jan 4 skips) = 254
+      const tweet =
+        'テスト #あ茶会\n\n第254回 🎸題名のないお茶会🏘️\n【日時】1月11日(日) 14:30〜16:00\n【場所】TestWorld By Creator\n【参加方法】Group＋「題名のないお茶会」にjoin';
+      const currentDate = new Date('2026-01-10');
+      const result = validateTweet(tweet, new Date('2025-12-21'), 253, currentDate);
+      expect(result.isSunday).toBe(true);
+      expect(result.expectedMeetingNumber).toBe(254);
+      expect(result.isCorrectMeeting).toBe(true);
+    });
+
     it('correctly calculates meeting #255 for Jan 18 2026', () => {
-      // Jan 18, 2026 is a Sunday, one week after reference
+      // Jan 18, 2026 is a Sunday
+      // Weeks from Dec 21 to Jan 18 = 4 weeks
+      // Expected: 253 + 4 - 2 (Dec 28 + Jan 4 skips) = 255
       const tweet =
         'テスト #あ茶会\n\n第255回 🎸題名のないお茶会🏘️\n【日時】1月18日(日) 14:30〜16:00\n【場所】TestWorld By Creator\n【参加方法】Group＋「題名のないお茶会」にjoin';
       const currentDate = new Date('2026-01-12');
-      const result = validateTweet(tweet, new Date('2026-01-11'), 254, currentDate);
+      const result = validateTweet(tweet, new Date('2025-12-21'), 253, currentDate);
       expect(result.isSunday).toBe(true);
       expect(result.expectedMeetingNumber).toBe(255);
       expect(result.isCorrectMeeting).toBe(true);
     });
 
-    it('accounts for skipped meeting on Jan 25 2026', () => {
+    it('accounts for all skipped meetings (12/28, 1/4, 1/25)', () => {
       // Feb 1, 2026 is a Sunday
-      // Weeks from Jan 11 to Feb 1 = 3 weeks
-      // Expected: 254 + 3 - 1 (Jan 25 skip) = 256
+      // Weeks from Dec 21 to Feb 1 = 6 weeks
+      // Expected: 253 + 6 - 3 (Dec 28, Jan 4, Jan 25 skips) = 256
       const tweet =
         'テスト #あ茶会\n\n第256回 🎸題名のないお茶会🏘️\n【日時】2月1日(日) 14:30〜16:00\n【場所】TestWorld By Creator\n【参加方法】Group＋「題名のないお茶会」にjoin';
       const currentDate = new Date('2026-01-26');
-      const result = validateTweet(tweet, new Date('2026-01-11'), 254, currentDate);
+      const result = validateTweet(tweet, new Date('2025-12-21'), 253, currentDate);
       expect(result.isSunday).toBe(true);
       expect(result.expectedMeetingNumber).toBe(256);
       expect(result.isCorrectMeeting).toBe(true);
@@ -107,7 +122,7 @@ describe('validateTweet', () => {
       const tweet =
         'テスト #あ茶会\n\n第254回 🎸題名のないお茶会🏘️\n【日時】1月11日(日) 14:30〜16:00\n【場所】TestWorld By Creator\n【参加方法】Group＋「題名のないお茶会」にjoin';
       const currentDate = new Date('2025-12-20');
-      const result = validateTweet(tweet, new Date('2026-01-11'), 254, currentDate);
+      const result = validateTweet(tweet, new Date('2025-12-21'), 253, currentDate);
       expect(result.isSunday).toBe(true);
       expect(result.expectedMeetingNumber).toBe(254);
       expect(result.isCorrectMeeting).toBe(true);
