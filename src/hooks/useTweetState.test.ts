@@ -117,6 +117,32 @@ describe('validateTweet', () => {
       expect(result.isCorrectMeeting).toBe(true);
     });
 
+    it('correctly calculates meeting #259 for Mar 1 2026 (skipping 2/22)', () => {
+      // Mar 1, 2026 is a Sunday
+      // Weeks from Dec 21 to Mar 1 = 10 weeks
+      // Expected: 253 + 10 - 4 (Dec 28, Jan 4, Jan 25, Feb 22 skips) = 259
+      const tweet =
+        'テスト #あ茶会\n\n第259回 🎸題名のないお茶会🏘️\n【日時】3月1日(日) 14:30〜16:00\n【場所】TestWorld By Creator\n【参加方法】Group＋「題名のないお茶会」にjoin';
+      const currentDate = new Date('2026-02-23');
+      const result = validateTweet(tweet, new Date('2025-12-21'), 253, currentDate);
+      expect(result.isSunday).toBe(true);
+      expect(result.expectedMeetingNumber).toBe(259);
+      expect(result.isCorrectMeeting).toBe(true);
+    });
+
+    it('correctly calculates meeting #260 for Mar 15 2026 (skipping 2/22 and 3/8)', () => {
+      // Mar 15, 2026 is a Sunday
+      // Weeks from Dec 21 to Mar 15 = 12 weeks
+      // Expected: 253 + 12 - 5 (Dec 28, Jan 4, Jan 25, Feb 22, Mar 8 skips) = 260
+      const tweet =
+        'テスト #あ茶会\n\n第260回 🎸題名のないお茶会🏘️\n【日時】3月15日(日) 14:30〜16:00\n【場所】TestWorld By Creator\n【参加方法】Group＋「題名のないお茶会」にjoin';
+      const currentDate = new Date('2026-03-09');
+      const result = validateTweet(tweet, new Date('2025-12-21'), 253, currentDate);
+      expect(result.isSunday).toBe(true);
+      expect(result.expectedMeetingNumber).toBe(260);
+      expect(result.isCorrectMeeting).toBe(true);
+    });
+
     it('uses next year for dates that have passed this year', () => {
       // If current date is Dec 2025, and tweet says "1月11日(日)", it should use Jan 11, 2026
       const tweet =
