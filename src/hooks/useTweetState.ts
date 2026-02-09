@@ -75,6 +75,7 @@ export const skippedDates = [
   new Date('2026-01-25'),
   new Date('2026-02-22'),
   new Date('2026-03-08'),
+  new Date('2026-04-26'), // リアルあ茶会の日
 ];
 
 export function validateTweet(

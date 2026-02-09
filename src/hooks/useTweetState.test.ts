@@ -143,6 +143,19 @@ describe('validateTweet', () => {
       expect(result.isCorrectMeeting).toBe(true);
     });
 
+    it('correctly calculates meeting #264 for May 3 2026 (skipping 4/26 for リアルあ茶会)', () => {
+      // May 3, 2026 is a Sunday
+      // Weeks from Dec 21 to May 3 = 19 weeks
+      // Expected: 253 + 19 - 6 (Dec 28, Jan 4, Jan 25, Feb 22, Mar 8, Apr 26 skips) = 266
+      const tweet =
+        'テスト #あ茶会\n\n第266回 🎸題名のないお茶会🏘️\n【日時】5月3日(日) 14:30〜16:00\n【場所】TestWorld By Creator\n【参加方法】Group＋「題名のないお茶会」にjoin';
+      const currentDate = new Date('2026-04-27');
+      const result = validateTweet(tweet, new Date('2025-12-21'), 253, currentDate);
+      expect(result.isSunday).toBe(true);
+      expect(result.expectedMeetingNumber).toBe(266);
+      expect(result.isCorrectMeeting).toBe(true);
+    });
+
     it('uses next year for dates that have passed this year', () => {
       // If current date is Dec 2025, and tweet says "1月11日(日)", it should use Jan 11, 2026
       const tweet =
