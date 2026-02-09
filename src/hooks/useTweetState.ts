@@ -73,6 +73,8 @@ export const skippedDates = [
   new Date('2025-12-28'),
   new Date('2026-01-04'),
   new Date('2026-01-25'),
+  new Date('2026-02-22'),
+  new Date('2026-03-08'),
 ];
 
 export function validateTweet(
