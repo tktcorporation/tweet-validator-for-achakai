@@ -1,4 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import {
+  fetchScheduleFromSheet,
+  findEntryByDate,
+  deriveSkippedDates,
+  type ScheduleEntry,
+} from '../lib/fetchSheetSchedule';
 
 export const instrumentEmojiArray = '🎸 🎹 🥁 🎺 🎻 🎷 🪕 🪗 🎤 🎧 📯 🪘 🎼'.split(' ');
 
@@ -83,6 +89,7 @@ export function validateTweet(
   referenceDate = new Date('2025-12-21'),
   referenceMeetingNumber = 253,
   currentDate: Date = new Date(),
+  skippedDatesOverride: Date[] = skippedDates,
 ) {
   const meetingRegex = /第(\d+)回/;
   const meetingMatch = text.match(meetingRegex);
@@ -138,7 +145,7 @@ export function validateTweet(
   );
   let expectedMeetingNumber = referenceMeetingNumber + weeksDiff;
   // Count skipped dates between reference date and tweet date
-  const skippedCount = skippedDates.filter(d => {
+  const skippedCount = skippedDatesOverride.filter(d => {
     return d > referenceDate && d <= tweetDate;
   }).length;
   expectedMeetingNumber -= skippedCount;
@@ -209,6 +216,31 @@ export function useTweetState() {
   const [instrumentEmoji, setInstrumentEmoji] = useState(initialData.instrumentEmoji || '🎸');
   const [suffixEmoji, setSuffixEmoji] = useState(initialData.suffixEmoji || '🏘️');
   const [structuredTemplate, setStructuredTemplate] = useState<string[]>(initialData.structuredTemplate || []);
+  const [sheetSchedule, setSheetSchedule] = useState<ScheduleEntry[]>([]);
+  const [sheetSkippedDates, setSheetSkippedDates] = useState<Date[]>(skippedDates);
+  const [isSheetLoading, setIsSheetLoading] = useState(false);
+  const [sheetError, setSheetError] = useState<string | null>(null);
+
+  const loadSheetSchedule = useCallback(async () => {
+    setIsSheetLoading(true);
+    setSheetError(null);
+    try {
+      const entries = await fetchScheduleFromSheet();
+      setSheetSchedule(entries);
+      const derived = deriveSkippedDates(entries);
+      if (derived.length > 0) {
+        setSheetSkippedDates(derived);
+      }
+    } catch (e) {
+      setSheetError(e instanceof Error ? e.message : 'スプレッドシートの読み込みに失敗しました');
+    } finally {
+      setIsSheetLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadSheetSchedule();
+  }, [loadSheetSchedule]);
 
   useEffect(() => {
     setCharCount(countTweetLength(tweetText));
@@ -272,27 +304,39 @@ export function useTweetState() {
       }
       const month = upcomingSunday.getMonth() + 1;
       const day = upcomingSunday.getDate();
-      const weeksDiff = Math.round(
-        (upcomingSunday.getTime() - referenceDate.getTime()) /
-          (7 * 24 * 60 * 60 * 1000),
-      );
-      let meetingNumber = referenceMeetingNumber + weeksDiff;
-      // Count skipped dates between reference date and upcoming Sunday
-      const skippedCount = skippedDates.filter(d => {
-        return d > referenceDate && d <= upcomingSunday;
-      }).length;
-      meetingNumber -= skippedCount;
+
+      // Try to find this week's entry from the sheet
+      const sheetEntry = findEntryByDate(sheetSchedule, upcomingSunday);
+
+      let meetingNumber: number;
+      if (sheetEntry?.meetingNumber) {
+        meetingNumber = sheetEntry.meetingNumber;
+      } else {
+        const weeksDiff = Math.round(
+          (upcomingSunday.getTime() - referenceDate.getTime()) /
+            (7 * 24 * 60 * 60 * 1000),
+        );
+        meetingNumber = referenceMeetingNumber + weeksDiff;
+        const skippedCount = sheetSkippedDates.filter(d => {
+          return d > referenceDate && d <= upcomingSunday;
+        }).length;
+        meetingNumber -= skippedCount;
+      }
+
+      const sheetWorld = sheetEntry?.worldName || '';
+      const sheetCreator = sheetEntry?.creator || '';
+
       const template =
         `自由文 #あ茶会\n\n` +
         `第${meetingNumber}回 ${instrumentEmoji}題名のないお茶会${suffixEmoji}\n` +
         `【日時】${month}月${day}日(日) 14:30〜16:00\n` +
-        `【場所】ワールド名 By クリエイター名\n` +
+        `【場所】${sheetWorld || 'ワールド名'} By ${sheetCreator || 'クリエイター名'}\n` +
         `【参加方法】Group＋「題名のないお茶会」にjoin`;
       setTweetText(template);
       setStructuredTemplate(template.split('\n'));
       setFreeText('');
-      setWorldName('');
-      setCreatorName('');
+      setWorldName(sheetWorld);
+      setCreatorName(sheetCreator);
       setStructuredMode(true);
       setIsLoadingSchedule(false);
     }, 300);
@@ -357,7 +401,7 @@ export function useTweetState() {
     setStructuredMode(true);
   };
 
-  const validation = validateTweet(tweetText, referenceDate, referenceMeetingNumber);
+  const validation = validateTweet(tweetText, referenceDate, referenceMeetingNumber, new Date(), sheetSkippedDates);
   const tweetLength = countTweetLength(tweetText);
   const maxTweetLength = 280;
 
@@ -395,6 +439,10 @@ export function useTweetState() {
     tweetLength,
     maxTweetLength,
     isScheduleExpired,
+    isSheetLoading,
+    sheetError,
+    sheetSchedule,
+    loadSheetSchedule,
   };
 }
 
