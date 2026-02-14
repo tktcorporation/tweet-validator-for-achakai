@@ -47,6 +47,10 @@ function App() {
     tweetLength,
     maxTweetLength,
     isScheduleExpired,
+    isSheetLoading,
+    sheetError,
+    sheetSchedule,
+    loadSheetSchedule,
   } = useTweetState();
 
   const [isEmojiSectionOpen, setIsEmojiSectionOpen] = useState(false);
@@ -60,6 +64,32 @@ function App() {
             あ茶会 Tweet Validator
           </h1>
         </header>
+
+        {/* Sheet Data Status */}
+        <div className="mb-4 flex items-center justify-center gap-2 text-xs">
+          {isSheetLoading ? (
+            <span className="flex items-center gap-1 text-neutral-medium">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              スプレッドシート読み込み中...
+            </span>
+          ) : sheetError ? (
+            <span className="flex items-center gap-1 text-amber-600">
+              <AlertTriangle className="w-3 h-3" />
+              シート読み込み失敗
+              <button
+                onClick={loadSheetSchedule}
+                className="underline hover:text-amber-700 ml-1"
+              >
+                再試行
+              </button>
+            </span>
+          ) : sheetSchedule.length > 0 ? (
+            <span className="flex items-center gap-1 text-green-600">
+              <CheckCircle className="w-3 h-3" />
+              スプレッドシート連携中（{sheetSchedule.length}件）
+            </span>
+          ) : null}
+        </div>
 
         {/* Expired Schedule Banner */}
         {isScheduleExpired && (
