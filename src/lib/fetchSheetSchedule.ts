@@ -9,7 +9,7 @@ export interface ScheduleEntry {
 }
 
 export async function fetchScheduleFromSheet(): Promise<ScheduleEntry[]> {
-  const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&gid=${SCHEDULE_SHEET_GID}`;
+  const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=${SCHEDULE_SHEET_GID}`;
   const response = await fetch(url);
   if (!response.ok) throw new Error(`Failed to fetch schedule: ${response.status}`);
   const csv = await response.text();
