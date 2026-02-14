@@ -54,6 +54,15 @@ function App() {
   } = useTweetState();
 
   const [isEmojiSectionOpen, setIsEmojiSectionOpen] = useState(false);
+  const [isScheduleSectionOpen, setIsScheduleSectionOpen] = useState(false);
+
+  // 今週の日曜日を計算（スケジュールのハイライト用）
+  const getUpcomingSunday = () => {
+    const d = new Date();
+    while (d.getDay() !== 0) d.setDate(d.getDate() + 1);
+    return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+  };
+  const upcomingSundayStr = getUpcomingSunday();
 
   return (
     <div className="min-h-screen bg-neutral-ultralight py-8 px-4 sm:px-6 font-sans">
@@ -65,31 +74,119 @@ function App() {
           </h1>
         </header>
 
-        {/* Sheet Data Status */}
-        <div className="mb-4 flex items-center justify-center gap-2 text-xs">
-          {isSheetLoading ? (
-            <span className="flex items-center gap-1 text-neutral-medium">
-              <Loader2 className="w-3 h-3 animate-spin" />
-              スプレッドシート読み込み中...
-            </span>
-          ) : sheetError ? (
-            <span className="flex items-center gap-1 text-amber-600">
-              <AlertTriangle className="w-3 h-3" />
-              シート読み込み失敗
-              <button
-                onClick={loadSheetSchedule}
-                className="underline hover:text-amber-700 ml-1"
-              >
-                再試行
-              </button>
-            </span>
-          ) : sheetSchedule.length > 0 ? (
-            <span className="flex items-center gap-1 text-green-600">
-              <CheckCircle className="w-3 h-3" />
-              スプレッドシート連携中（{sheetSchedule.length}件）
-            </span>
-          ) : null}
-        </div>
+        {/* Sheet Schedule Section */}
+        <section className="bg-white rounded-xl shadow-lg mb-6 overflow-hidden">
+          <button
+            onClick={() => setIsScheduleSectionOpen(!isScheduleSectionOpen)}
+            className="w-full px-5 py-3 flex items-center justify-between text-left hover:bg-neutral-light/50 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-neutral-medium" />
+              <span className="text-sm font-medium text-neutral-dark">スプレッドシート予定</span>
+              {isSheetLoading ? (
+                <Loader2 className="w-3 h-3 animate-spin text-neutral-medium" />
+              ) : sheetError ? (
+                <span className="text-xs text-amber-600 flex items-center gap-1">
+                  <AlertTriangle className="w-3 h-3" />
+                  読み込み失敗
+                </span>
+              ) : sheetSchedule.length > 0 ? (
+                <span className="text-xs text-green-600">({sheetSchedule.length}件)</span>
+              ) : null}
+            </div>
+            {isScheduleSectionOpen ? (
+              <ChevronUp className="w-5 h-5 text-neutral-medium" />
+            ) : (
+              <ChevronDown className="w-5 h-5 text-neutral-medium" />
+            )}
+          </button>
+          {isScheduleSectionOpen && (
+            <div className="px-5 pb-4">
+              {sheetError && (
+                <div className="mb-3 p-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700 flex items-center justify-between">
+                  <span>{sheetError}</span>
+                  <button
+                    onClick={loadSheetSchedule}
+                    className="px-2 py-1 bg-amber-100 hover:bg-amber-200 rounded text-amber-800 font-medium transition-colors"
+                  >
+                    再試行
+                  </button>
+                </div>
+              )}
+              {isSheetLoading && (
+                <div className="text-center py-4 text-sm text-neutral-medium">
+                  <Loader2 className="w-5 h-5 animate-spin inline mr-2" />
+                  読み込み中...
+                </div>
+              )}
+              {!isSheetLoading && sheetSchedule.length > 0 && (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b border-neutral-medium/20">
+                        <th className="text-left py-2 px-2 text-neutral-medium font-medium">日付</th>
+                        <th className="text-left py-2 px-2 text-neutral-medium font-medium">回</th>
+                        <th className="text-left py-2 px-2 text-neutral-medium font-medium">ワールド名</th>
+                        <th className="text-left py-2 px-2 text-neutral-medium font-medium">作者</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sheetSchedule
+                        .filter(entry => {
+                          // 過去2週間以降のエントリのみ表示
+                          const [y, m, d] = entry.date.split('/').map(Number);
+                          const entryDate = new Date(y, m - 1, d);
+                          const twoWeeksAgo = new Date();
+                          twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+                          return entryDate >= twoWeeksAgo;
+                        })
+                        .slice(0, 12)
+                        .map((entry) => {
+                          const isThisWeek = entry.date === upcomingSundayStr;
+                          const isSkipped = entry.meetingNumber === null;
+                          return (
+                            <tr
+                              key={entry.date}
+                              className={`border-b border-neutral-medium/10 ${
+                                isThisWeek
+                                  ? 'bg-brand-primary/10 font-semibold'
+                                  : isSkipped
+                                    ? 'bg-red-50/50 text-neutral-medium'
+                                    : ''
+                              }`}
+                            >
+                              <td className="py-1.5 px-2 whitespace-nowrap">
+                                {isThisWeek && <span className="mr-1">▶</span>}
+                                {entry.date}
+                              </td>
+                              <td className="py-1.5 px-2">
+                                {isSkipped ? (
+                                  <span className="text-red-400">休み</span>
+                                ) : (
+                                  `第${entry.meetingNumber}回`
+                                )}
+                              </td>
+                              <td className="py-1.5 px-2 max-w-[150px] truncate" title={entry.worldName}>
+                                {entry.worldName || '-'}
+                              </td>
+                              <td className="py-1.5 px-2 max-w-[100px] truncate" title={entry.creator}>
+                                {entry.creator || '-'}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              {!isSheetLoading && !sheetError && sheetSchedule.length === 0 && (
+                <p className="text-sm text-neutral-medium py-3 text-center">
+                  データがありません
+                </p>
+              )}
+            </div>
+          )}
+        </section>
 
         {/* Expired Schedule Banner */}
         {isScheduleExpired && (
