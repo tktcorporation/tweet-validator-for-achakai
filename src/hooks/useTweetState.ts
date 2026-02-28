@@ -99,18 +99,14 @@ export function buildStructuredTweet(
 
 // Dates when the event is skipped (holidays)
 export const skippedDates = [
-  new Date('2025-12-28'),
-  new Date('2026-01-04'),
-  new Date('2026-01-25'),
-  new Date('2026-02-22'),
   new Date('2026-03-08'),
   new Date('2026-04-26'), // リアルあ茶会の日
 ];
 
 export function validateTweet(
   text: string,
-  referenceDate = new Date('2025-12-21'),
-  referenceMeetingNumber = 253,
+  referenceDate = new Date('2026-03-01'),
+  referenceMeetingNumber = 261,
   currentDate: Date = new Date(),
   skippedDatesOverride: Date[] = skippedDates,
 ) {
@@ -302,8 +298,8 @@ export function useTweetState() {
     }
   }, [tweetText, structuredMode, freeText, worldName, creatorName, instrumentEmoji, suffixEmoji, structuredTemplate]);
 
-  const referenceDate = new Date('2025-12-21');
-  const referenceMeetingNumber = 253;
+  const referenceDate = new Date('2026-03-01');
+  const referenceMeetingNumber = 261;
 
   const generateThisWeeksSchedule = () => {
     if (
