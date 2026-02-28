@@ -25,12 +25,23 @@ export interface ParsedFields {
   suffix: string;
 }
 
+export function extractLocation(text: string): { world: string; creator: string } | null {
+  const blockMatch = text.match(/【場所】([\s\S]*?)(?=\n【|\s*$)/);
+  if (!blockMatch) return null;
+  const block = blockMatch[1];
+  const byIdx = block.lastIndexOf(' By ');
+  if (byIdx === -1) return null;
+  return {
+    world: block.substring(0, byIdx).trim(),
+    creator: block.substring(byIdx + 4).trim(),
+  };
+}
+
 export function parseStructuredFields(text: string): ParsedFields | null {
   const freeMatch = text.match(/^[\s\S]*?(?=#あ茶会)/);
   const free = freeMatch ? freeMatch[0].trim() : '';
-  const locationRegex = /【場所】([^\n]+)\s*By\s*(.+?)(?:\s*$|\n)/i;
-  const locationMatch = text.match(locationRegex);
-  if (!locationMatch) {
+  const location = extractLocation(text);
+  if (!location) {
     return null;
   }
   const meetingEmojiMatch = text.match(
@@ -40,8 +51,8 @@ export function parseStructuredFields(text: string): ParsedFields | null {
   const suffix = meetingEmojiMatch ? meetingEmojiMatch[2].trim() : '🏘️';
   return {
     freeText: free === '自由文' ? '' : free,
-    world: locationMatch[1].trim() === 'ワールド名' ? '' : locationMatch[1].trim(),
-    creator: locationMatch[2].trim() === 'クリエイター名' ? '' : locationMatch[2].trim(),
+    world: location.world === 'ワールド名' ? '' : location.world,
+    creator: location.creator === 'クリエイター名' ? '' : location.creator,
     instrument,
     suffix,
   };
@@ -58,11 +69,22 @@ export function buildStructuredTweet(
   if (!template.length) return '';
   const lines = [...template];
   lines[0] = `${free} #あ茶会`;
+
+  // Replace the entire location block (【場所】 line and any continuation lines
+  // before the next 【 section). This prevents duplicates when world names
+  // contain newlines (e.g. multiline values from the spreadsheet).
+  const locationIdx = lines.findIndex(line => line.startsWith('【場所】'));
+  if (locationIdx !== -1) {
+    let endIdx = locationIdx + 1;
+    while (endIdx < lines.length && !lines[endIdx].startsWith('【')) {
+      endIdx++;
+    }
+    const locationLines = `【場所】${world} By ${creator}`.split('\n');
+    lines.splice(locationIdx, endIdx - locationIdx, ...locationLines);
+  }
+
   return lines
     .map((line) => {
-      if (line.startsWith('【場所】')) {
-        return `【場所】${world} By ${creator}`;
-      }
       if (line.includes('題名のないお茶会')) {
         return line.replace(
           /(第\d+回 )(.+?)(題名のないお茶会)([^\n]*)/,
@@ -98,9 +120,8 @@ export function validateTweet(
   const timeRegex = /(\d{1,2}):(\d{2})〜(\d{1,2}):(\d{2})/;
   const timeMatch = text.match(timeRegex);
   const hasHashtag = text.includes('#あ茶会');
-  const locationRegex = /【場所】([^\n]+)\s*By\s*(.+?)(?:\s*$|\n)/i;
-  const locationMatch = text.match(locationRegex);
-  const hasValidLocation = locationMatch !== null;
+  const location = extractLocation(text);
+  const hasValidLocation = location !== null;
   const placeholdersRegex = /(ワールド名|クリエイター名|自由文)/;
   const hasPlaceholders = placeholdersRegex.test(text);
   const nightWordRegex = /(夜|宵|今宵|今夜)/;
@@ -175,8 +196,8 @@ export function validateTweet(
     extractedInfo: {
       date: dateMatch ? `${month}月${day}日(日)` : null,
       time,
-      worldName: locationMatch ? locationMatch[1].trim() : null,
-      creator: locationMatch ? locationMatch[2].trim() : null,
+      worldName: location ? location.world : null,
+      creator: location ? location.creator : null,
       meetingNumber: meetingNumber ? `第${meetingNumber}回` : null,
     },
   };

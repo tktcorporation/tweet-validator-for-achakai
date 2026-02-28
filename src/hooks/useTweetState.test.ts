@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   parseStructuredFields,
   buildStructuredTweet,
+  extractLocation,
   validateTweet,
 } from './useTweetState';
 
@@ -47,6 +48,51 @@ describe('buildStructuredTweet', () => {
     const result = buildStructuredTweet(template, 'line1\nline2', 'World', 'Creator', '🎻', '🏠');
     expect(result.startsWith('line1\nline2 #あ茶会')).toBe(true);
   });
+
+  it('does not duplicate lines when world name contains newlines', () => {
+    // Simulate a template generated with a multiline world name from a spreadsheet
+    const multilineWorld = 'DOBUITA ＆ MIKASA WORLD\n（メタバースヨコスカ）';
+    const creator = 'MetasukaVR';
+    const templateWithMultiline = [
+      '自由文 #あ茶会',
+      '',
+      '第259回 🎷題名のないお茶会🍫',
+      '【日時】3月1日(日) 14:30〜16:00',
+      `【場所】DOBUITA ＆ MIKASA WORLD`,
+      `（メタバースヨコスカ） By MetasukaVR`,
+      '【参加方法】Group＋「題名のないお茶会」にjoin',
+    ];
+    const result = buildStructuredTweet(
+      templateWithMultiline, 'test', multilineWorld, creator, '🎷', '🍫',
+    );
+    const occurrences = result.split('（メタバースヨコスカ）').length - 1;
+    expect(occurrences).toBe(1);
+    expect(result).toContain(`【場所】DOBUITA ＆ MIKASA WORLD\n（メタバースヨコスカ） By MetasukaVR`);
+    expect(result).toContain('【参加方法】');
+  });
+});
+
+describe('extractLocation', () => {
+  it('extracts single-line location', () => {
+    const text = '【場所】MyWorld By Creator\n【参加方法】join';
+    const result = extractLocation(text);
+    expect(result).toEqual({ world: 'MyWorld', creator: 'Creator' });
+  });
+
+  it('extracts multiline location', () => {
+    const text = '【場所】DOBUITA ＆ MIKASA WORLD\n（メタバースヨコスカ） By MetasukaVR\n【参加方法】join';
+    const result = extractLocation(text);
+    expect(result?.world).toBe('DOBUITA ＆ MIKASA WORLD\n（メタバースヨコスカ）');
+    expect(result?.creator).toBe('MetasukaVR');
+  });
+
+  it('returns null when no location section', () => {
+    expect(extractLocation('no location here')).toBeNull();
+  });
+
+  it('returns null when no By separator', () => {
+    expect(extractLocation('【場所】WorldOnly\n【参加方法】join')).toBeNull();
+  });
 });
 
 describe('validateTweet', () => {
@@ -63,6 +109,17 @@ describe('validateTweet', () => {
     const currentDate = new Date('2026-01-10');
     const result = validateTweet(text, undefined, undefined, currentDate);
     expect(result.hasNightWord).toBe(false);
+  });
+
+  it('validates tweet with multiline location', () => {
+    const tweet =
+      'テスト #あ茶会\n\n第259回 🎸題名のないお茶会🏘️\n【日時】3月1日(日) 14:30〜16:00\n【場所】DOBUITA ＆ MIKASA WORLD\n（メタバースヨコスカ） By MetasukaVR\n【参加方法】Group＋「題名のないお茶会」にjoin';
+    const currentDate = new Date('2026-02-23');
+    const result = validateTweet(tweet, new Date('2025-12-21'), 253, currentDate);
+    expect(result.hasValidLocation).toBe(true);
+    expect(result.extractedInfo.worldName).toBe('DOBUITA ＆ MIKASA WORLD\n（メタバースヨコスカ）');
+    expect(result.extractedInfo.creator).toBe('MetasukaVR');
+    expect(result.isValid).toBe(true);
   });
 
   describe('year calculation', () => {
