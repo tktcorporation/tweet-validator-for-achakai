@@ -129,3 +129,66 @@ export function deriveSkippedDates(entries: ScheduleEntry[]): Date[] {
       return new Date(y, m - 1, d);
     });
 }
+
+/** Generate a schedule announcement tweet from sheet data.
+ *  Format:
+ *  #あ茶会 N月の予定をお知らせします
+ *
+ *  M/D 🍵
+ *  M/D - お休み -
+ */
+export function generateScheduleAnnouncement(
+  entries: ScheduleEntry[],
+  currentDate: Date = new Date(),
+  weeksCount = 6,
+): string {
+  // Find the nearest upcoming Sunday (including today)
+  const startSunday = new Date(currentDate);
+  startSunday.setHours(0, 0, 0, 0);
+  while (startSunday.getDay() !== 0) startSunday.setDate(startSunday.getDate() + 1);
+
+  // Filter entries from startSunday onward
+  const upcoming = entries.filter(e => {
+    const [y, m, d] = e.date.split('/').map(Number);
+    const entryDate = new Date(y, m - 1, d);
+    entryDate.setHours(0, 0, 0, 0);
+    return entryDate >= startSunday;
+  }).slice(0, weeksCount);
+
+  if (upcoming.length === 0) return '';
+
+  const firstMonth = Number.parseInt(upcoming[0].date.split('/')[1]);
+
+  let text = `#あ茶会 ${firstMonth}月の予定をお知らせします\n\n`;
+
+  // Track years that already had an active event (before or within the range)
+  const yearsWithPriorActive = new Set<number>();
+  for (const e of entries) {
+    const [y, m, d] = e.date.split('/').map(Number);
+    const entryDate = new Date(y, m - 1, d);
+    if (entryDate >= startSunday) break;
+    if (e.meetingNumber !== null) {
+      yearsWithPriorActive.add(y);
+    }
+  }
+  const yearsSeenActive = new Set(yearsWithPriorActive);
+
+  for (const entry of upcoming) {
+    const [y, m, d] = entry.date.split('/').map(Number);
+    const isSkipped = entry.meetingNumber === null;
+
+    let annotation = '';
+    if (!isSkipped && !yearsSeenActive.has(y)) {
+      annotation = `（${y}年初）`;
+      yearsSeenActive.add(y);
+    }
+
+    if (isSkipped) {
+      text += `${m}/${d} - お休み -\n`;
+    } else {
+      text += `${m}/${d} 🍵${annotation}\n`;
+    }
+  }
+
+  return text.trimEnd();
+}

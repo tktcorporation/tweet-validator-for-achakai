@@ -3,6 +3,7 @@ import {
   fetchScheduleFromSheet,
   findEntryByDate,
   deriveSkippedDates,
+  generateScheduleAnnouncement,
   type ScheduleEntry,
 } from '../lib/fetchSheetSchedule';
 
@@ -363,6 +364,31 @@ export function useTweetState() {
     }, 300);
   };
 
+  const generateScheduleAnnouncementTweet = () => {
+    if (
+      tweetText.trim() !== '' ||
+      freeText.trim() !== '' ||
+      worldName.trim() !== '' ||
+      creatorName.trim() !== ''
+    ) {
+      const confirmed = window.confirm('現在の入力内容は上書きされます。続行しますか?');
+      if (!confirmed) {
+        return;
+      }
+    }
+    const announcement = generateScheduleAnnouncement(sheetSchedule);
+    if (!announcement) {
+      alert('予定データがありません。スプレッドシートを読み込んでください。');
+      return;
+    }
+    setTweetText(announcement);
+    setStructuredMode(false);
+    setStructuredTemplate([]);
+    setFreeText('');
+    setWorldName('');
+    setCreatorName('');
+  };
+
   const handleEmojiCopy = (emoji: string) => {
     navigator.clipboard
       .writeText(emoji)
@@ -452,6 +478,7 @@ export function useTweetState() {
     setSuffixEmoji,
     structuredTemplate,
     generateThisWeeksSchedule,
+    generateScheduleAnnouncementTweet,
     handleEmojiCopy,
     handleTweetCopy,
     switchToStructuredMode,
