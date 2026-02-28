@@ -15,6 +15,7 @@ import {
   Trash2,
   Edit3,
   Eye,
+  Megaphone,
 } from 'lucide-react';
 import useTweetState, { instrumentEmojiArray } from './hooks/useTweetState';
 
@@ -39,6 +40,7 @@ function App() {
     suffixEmoji,
     setSuffixEmoji,
     generateThisWeeksSchedule,
+    generateScheduleAnnouncementTweet,
     handleEmojiCopy,
     handleTweetCopy,
     switchToStructuredMode,
@@ -230,23 +232,33 @@ function App() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <h2 className="text-lg font-bold text-neutral-dark">ツイート作成</h2>
             {!isScheduleExpired && (
-              <button
-                onClick={generateThisWeeksSchedule}
-                disabled={isLoadingSchedule}
-                className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-opacity-90 transition-all duration-150 text-sm font-medium shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center"
-              >
-                {isLoadingSchedule ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    生成中...
-                  </>
-                ) : (
-                  <>
-                    <Calendar className="w-4 h-4 mr-2" />
-                    今週の予定を生成
-                  </>
-                )}
-              </button>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={generateThisWeeksSchedule}
+                  disabled={isLoadingSchedule}
+                  className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-opacity-90 transition-all duration-150 text-sm font-medium shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center"
+                >
+                  {isLoadingSchedule ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      生成中...
+                    </>
+                  ) : (
+                    <>
+                      <Calendar className="w-4 h-4 mr-2" />
+                      今週の予定を生成
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={generateScheduleAnnouncementTweet}
+                  disabled={isSheetLoading}
+                  className="px-4 py-2 bg-brand-secondary text-white rounded-lg hover:bg-opacity-90 transition-all duration-150 text-sm font-medium shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-brand-secondary focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center"
+                >
+                  <Megaphone className="w-4 h-4 mr-2" />
+                  予定お知らせを生成
+                </button>
+              </div>
             )}
           </div>
 
