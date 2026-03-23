@@ -126,6 +126,7 @@ function App() {
                   <table className="w-full text-xs">
                     <thead>
                       <tr className="border-b border-neutral-medium/20">
+                        <th className="text-center py-2 px-2 text-neutral-medium font-medium">確定</th>
                         <th className="text-left py-2 px-2 text-neutral-medium font-medium">日付</th>
                         <th className="text-left py-2 px-2 text-neutral-medium font-medium">回</th>
                         <th className="text-left py-2 px-2 text-neutral-medium font-medium">ワールド名</th>
@@ -157,6 +158,13 @@ function App() {
                                     : ''
                               }`}
                             >
+                              <td className="py-1.5 px-2 text-center">
+                                {entry.confirmed ? (
+                                  <CheckCircle className="w-4 h-4 text-green-500 inline" />
+                                ) : (
+                                  <span className="w-4 h-4 inline-block rounded-full border-2 border-neutral-medium/30" />
+                                )}
+                              </td>
                               <td className="py-1.5 px-2 whitespace-nowrap">
                                 {isThisWeek && <span className="mr-1">▶</span>}
                                 {entry.date}

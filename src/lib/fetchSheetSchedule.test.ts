@@ -78,6 +78,13 @@ describe('parseScheduleCSV', () => {
     expect(entries[2].meetingNumber).toBeNull(); // "-" means skipped
   });
 
+  it('extracts confirmed status from checkbox row', () => {
+    const entries = parseScheduleCSV(sampleCSV);
+    expect(entries[0].confirmed).toBe(true);
+    expect(entries[1].confirmed).toBe(false);
+    expect(entries[2].confirmed).toBe(false);
+  });
+
   it('extracts world names and creators', () => {
     const entries = parseScheduleCSV(sampleCSV);
     expect(entries[0].worldName).toBe('Stardust Piano');
@@ -109,9 +116,9 @@ describe('formatDateForSheet', () => {
 
 describe('findEntryByDate', () => {
   const entries = [
-    { date: '2026/02/01', meetingNumber: 256, worldName: 'World1', creator: 'Creator1' },
-    { date: '2026/02/08', meetingNumber: 257, worldName: 'World2', creator: 'Creator2' },
-    { date: '2026/02/15', meetingNumber: null, worldName: '', creator: '' },
+    { date: '2026/02/01', meetingNumber: 256, worldName: 'World1', creator: 'Creator1', confirmed: true },
+    { date: '2026/02/08', meetingNumber: 257, worldName: 'World2', creator: 'Creator2', confirmed: false },
+    { date: '2026/02/15', meetingNumber: null, worldName: '', creator: '', confirmed: false },
   ];
 
   it('finds entry matching date', () => {
@@ -127,9 +134,9 @@ describe('findEntryByDate', () => {
 
 describe('deriveSkippedDates', () => {
   const entries = [
-    { date: '2026/01/25', meetingNumber: null, worldName: '', creator: '' },
-    { date: '2026/02/01', meetingNumber: 256, worldName: 'World', creator: 'Creator' },
-    { date: '2026/02/22', meetingNumber: null, worldName: '', creator: '' },
+    { date: '2026/01/25', meetingNumber: null, worldName: '', creator: '', confirmed: false },
+    { date: '2026/02/01', meetingNumber: 256, worldName: 'World', creator: 'Creator', confirmed: true },
+    { date: '2026/02/22', meetingNumber: null, worldName: '', creator: '', confirmed: false },
   ];
 
   it('extracts dates with null meeting numbers', () => {
@@ -143,7 +150,7 @@ describe('deriveSkippedDates', () => {
 
   it('returns empty array when no skipped dates', () => {
     const noSkips = [
-      { date: '2026/02/01', meetingNumber: 256, worldName: 'W', creator: 'C' },
+      { date: '2026/02/01', meetingNumber: 256, worldName: 'W', creator: 'C', confirmed: true },
     ];
     expect(deriveSkippedDates(noSkips)).toEqual([]);
   });
@@ -151,13 +158,13 @@ describe('deriveSkippedDates', () => {
 
 describe('generateScheduleAnnouncement', () => {
   const entries = [
-    { date: '2025/12/21', meetingNumber: 253, worldName: 'W1', creator: 'C1' },
-    { date: '2025/12/28', meetingNumber: null, worldName: '', creator: '' },
-    { date: '2026/01/04', meetingNumber: null, worldName: '', creator: '' },
-    { date: '2026/01/11', meetingNumber: 254, worldName: 'W2', creator: 'C2' },
-    { date: '2026/01/18', meetingNumber: 255, worldName: 'W3', creator: 'C3' },
-    { date: '2026/01/25', meetingNumber: null, worldName: '', creator: '' },
-    { date: '2026/02/01', meetingNumber: 256, worldName: 'W4', creator: 'C4' },
+    { date: '2025/12/21', meetingNumber: 253, worldName: 'W1', creator: 'C1', confirmed: true },
+    { date: '2025/12/28', meetingNumber: null, worldName: '', creator: '', confirmed: false },
+    { date: '2026/01/04', meetingNumber: null, worldName: '', creator: '', confirmed: false },
+    { date: '2026/01/11', meetingNumber: 254, worldName: 'W2', creator: 'C2', confirmed: true },
+    { date: '2026/01/18', meetingNumber: 255, worldName: 'W3', creator: 'C3', confirmed: true },
+    { date: '2026/01/25', meetingNumber: null, worldName: '', creator: '', confirmed: false },
+    { date: '2026/02/01', meetingNumber: 256, worldName: 'W4', creator: 'C4', confirmed: true },
   ];
 
   it('generates announcement starting from the next Sunday', () => {

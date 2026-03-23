@@ -6,6 +6,7 @@ export interface ScheduleEntry {
   meetingNumber: number | null;
   worldName: string;
   creator: string;
+  confirmed: boolean;
 }
 
 export async function fetchScheduleFromSheet(): Promise<ScheduleEntry[]> {
@@ -77,6 +78,7 @@ export function parseScheduleCSV(csv: string): ScheduleEntry[] {
   const meetingRow = findRow('開催回数');
   const worldRow = findRow('ワールド名');
   const creatorRow = findRow('作者');
+  const confirmedRow = findRow('チェックが入っていたら確定分');
 
   if (!dateRow || !meetingRow) return [];
 
@@ -97,6 +99,7 @@ export function parseScheduleCSV(csv: string): ScheduleEntry[] {
       meetingNumber: Number.isNaN(meetingNumber) ? null : meetingNumber,
       worldName: worldRow?.[i]?.trim() || '',
       creator: creatorRow?.[i]?.trim() || '',
+      confirmed: confirmedRow?.[i]?.trim().toUpperCase() === 'TRUE',
     });
   }
 
