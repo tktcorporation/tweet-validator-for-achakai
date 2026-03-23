@@ -29,3 +29,6 @@ jobs:
 
       - name: Run Biome Format
         run: npx biome format .
+
+      - name: Run tests
+        run: npx vitest run

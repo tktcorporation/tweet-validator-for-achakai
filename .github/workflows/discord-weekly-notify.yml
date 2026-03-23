@@ -16,10 +16,13 @@ jobs:
         with:
           node-version: '22'
 
-      - name: Install tsx
-        run: npm install -g tsx
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run tests
+        run: npx vitest run
 
       - name: Send Discord notification
-        run: tsx scripts/discord-weekly-notify.ts
+        run: npx tsx scripts/discord-weekly-notify.ts
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
