@@ -6,7 +6,10 @@ export interface ScheduleEntry {
   meetingNumber: number | null;
   worldName: string;
   creator: string;
+  /** スプレッドシートの「確定」チェックボックスの状態。TRUE なら確定済み。 */
   confirmed: boolean;
+  /** ワールドのURL（スプレッドシート7行目） */
+  worldUrl: string;
 }
 
 export async function fetchScheduleFromSheet(): Promise<ScheduleEntry[]> {
@@ -78,7 +81,9 @@ export function parseScheduleCSV(csv: string): ScheduleEntry[] {
   const meetingRow = findRow('開催回数');
   const worldRow = findRow('ワールド名');
   const creatorRow = findRow('作者');
+  // スプレッドシートの確定チェックボックス行（"TRUE" / "FALSE"）
   const confirmedRow = findRow('チェックが入っていたら確定分');
+  const urlRow = findRow('url');
 
   if (!dateRow || !meetingRow) return [];
 
@@ -100,6 +105,7 @@ export function parseScheduleCSV(csv: string): ScheduleEntry[] {
       worldName: worldRow?.[i]?.trim() || '',
       creator: creatorRow?.[i]?.trim() || '',
       confirmed: confirmedRow?.[i]?.trim().toUpperCase() === 'TRUE',
+      worldUrl: urlRow?.[i]?.trim() || '',
     });
   }
 
@@ -131,6 +137,50 @@ export function deriveSkippedDates(entries: ScheduleEntry[]): Date[] {
       const [y, m, d] = e.date.split('/').map(Number);
       return new Date(y, m - 1, d);
     });
+}
+
+/**
+ * 水曜日の Discord 週次通知用メッセージを生成する。
+ * currentDate から直近の日曜を求め、該当エントリの状態に応じてメッセージを返す。
+ *
+ * 呼び出し元: scripts/discord-weekly-notify.ts (GitHub Actions から実行)
+ */
+export function generateDiscordWeeklyMessage(
+  entries: ScheduleEntry[],
+  currentDate: Date = new Date(),
+): string {
+  // 次の日曜を求める（当日が日曜ならその日）
+  const nextSunday = new Date(currentDate);
+  nextSunday.setHours(0, 0, 0, 0);
+  while (nextSunday.getDay() !== 0) nextSunday.setDate(nextSunday.getDate() + 1);
+
+  const m = nextSunday.getMonth() + 1;
+  const d = nextSunday.getDate();
+  const dateLabel = `${m}/${d}（日）`;
+
+  const entry = findEntryByDate(entries, nextSunday);
+
+  if (!entry) {
+    return `🍵 今週のあ茶会（${dateLabel}）\n\n今週の予定が見つかりません。スプレッドシートを確認してください。`;
+  }
+
+  // お休みの週（meetingNumber が null）
+  if (entry.meetingNumber === null) {
+    return `🍵 今週のあ茶会（${dateLabel}）\n\n今週はお休みです 🌙`;
+  }
+
+  // 確定していない週
+  if (!entry.confirmed) {
+    return `🍵 今週のあ茶会 第${entry.meetingNumber}回（${dateLabel}）\n\n今週のワールドはまだ決まっていません。決まり次第お知らせします！`;
+  }
+
+  // 確定済み
+  let msg = `🍵 今週のあ茶会 第${entry.meetingNumber}回（${dateLabel}）\n\n📍 ${entry.worldName} By ${entry.creator}\n⏰ 14:30〜16:00`;
+  if (entry.worldUrl) {
+    msg += `\n🔗 ${entry.worldUrl}`;
+  }
+  msg += '\n\nお楽しみに！';
+  return msg;
 }
 
 /** Generate a schedule announcement tweet from sheet data.
