@@ -6,6 +6,7 @@ import {
   findEntryByDate,
   deriveSkippedDates,
   generateScheduleAnnouncement,
+  generateDiscordWeeklyMessage,
 } from './fetchSheetSchedule';
 
 describe('parseCSV', () => {
@@ -78,6 +79,20 @@ describe('parseScheduleCSV', () => {
     expect(entries[2].meetingNumber).toBeNull(); // "-" means skipped
   });
 
+  it('extracts world URLs from url row', () => {
+    const entries = parseScheduleCSV(sampleCSV);
+    expect(entries[0].worldUrl).toBe('https://example.com');
+    expect(entries[1].worldUrl).toBe('https://example2.com');
+    expect(entries[2].worldUrl).toBe('');
+  });
+
+  it('extracts confirmed status from checkbox row', () => {
+    const entries = parseScheduleCSV(sampleCSV);
+    expect(entries[0].confirmed).toBe(true);   // "TRUE"
+    expect(entries[1].confirmed).toBe(false);  // "FALSE"
+    expect(entries[2].confirmed).toBe(false);  // "" (empty → false)
+  });
+
   it('extracts world names and creators', () => {
     const entries = parseScheduleCSV(sampleCSV);
     expect(entries[0].worldName).toBe('Stardust Piano');
@@ -109,9 +124,9 @@ describe('formatDateForSheet', () => {
 
 describe('findEntryByDate', () => {
   const entries = [
-    { date: '2026/02/01', meetingNumber: 256, worldName: 'World1', creator: 'Creator1' },
-    { date: '2026/02/08', meetingNumber: 257, worldName: 'World2', creator: 'Creator2' },
-    { date: '2026/02/15', meetingNumber: null, worldName: '', creator: '' },
+    { date: '2026/02/01', meetingNumber: 256, worldName: 'World1', creator: 'Creator1', confirmed: true, worldUrl: '' },
+    { date: '2026/02/08', meetingNumber: 257, worldName: 'World2', creator: 'Creator2', confirmed: false, worldUrl: '' },
+    { date: '2026/02/15', meetingNumber: null, worldName: '', creator: '', confirmed: false, worldUrl: '' },
   ];
 
   it('finds entry matching date', () => {
@@ -127,9 +142,9 @@ describe('findEntryByDate', () => {
 
 describe('deriveSkippedDates', () => {
   const entries = [
-    { date: '2026/01/25', meetingNumber: null, worldName: '', creator: '' },
-    { date: '2026/02/01', meetingNumber: 256, worldName: 'World', creator: 'Creator' },
-    { date: '2026/02/22', meetingNumber: null, worldName: '', creator: '' },
+    { date: '2026/01/25', meetingNumber: null, worldName: '', creator: '', confirmed: false, worldUrl: '' },
+    { date: '2026/02/01', meetingNumber: 256, worldName: 'World', creator: 'Creator', confirmed: true, worldUrl: '' },
+    { date: '2026/02/22', meetingNumber: null, worldName: '', creator: '', confirmed: false, worldUrl: '' },
   ];
 
   it('extracts dates with null meeting numbers', () => {
@@ -143,7 +158,7 @@ describe('deriveSkippedDates', () => {
 
   it('returns empty array when no skipped dates', () => {
     const noSkips = [
-      { date: '2026/02/01', meetingNumber: 256, worldName: 'W', creator: 'C' },
+      { date: '2026/02/01', meetingNumber: 256, worldName: 'W', creator: 'C', confirmed: true, worldUrl: '' },
     ];
     expect(deriveSkippedDates(noSkips)).toEqual([]);
   });
@@ -151,13 +166,13 @@ describe('deriveSkippedDates', () => {
 
 describe('generateScheduleAnnouncement', () => {
   const entries = [
-    { date: '2025/12/21', meetingNumber: 253, worldName: 'W1', creator: 'C1' },
-    { date: '2025/12/28', meetingNumber: null, worldName: '', creator: '' },
-    { date: '2026/01/04', meetingNumber: null, worldName: '', creator: '' },
-    { date: '2026/01/11', meetingNumber: 254, worldName: 'W2', creator: 'C2' },
-    { date: '2026/01/18', meetingNumber: 255, worldName: 'W3', creator: 'C3' },
-    { date: '2026/01/25', meetingNumber: null, worldName: '', creator: '' },
-    { date: '2026/02/01', meetingNumber: 256, worldName: 'W4', creator: 'C4' },
+    { date: '2025/12/21', meetingNumber: 253, worldName: 'W1', creator: 'C1', confirmed: true, worldUrl: '' },
+    { date: '2025/12/28', meetingNumber: null, worldName: '', creator: '', confirmed: false, worldUrl: '' },
+    { date: '2026/01/04', meetingNumber: null, worldName: '', creator: '', confirmed: false, worldUrl: '' },
+    { date: '2026/01/11', meetingNumber: 254, worldName: 'W2', creator: 'C2', confirmed: true, worldUrl: '' },
+    { date: '2026/01/18', meetingNumber: 255, worldName: 'W3', creator: 'C3', confirmed: true, worldUrl: '' },
+    { date: '2026/01/25', meetingNumber: null, worldName: '', creator: '', confirmed: false, worldUrl: '' },
+    { date: '2026/02/01', meetingNumber: 256, worldName: 'W4', creator: 'C4', confirmed: true, worldUrl: '' },
   ];
 
   it('generates announcement starting from the next Sunday', () => {
@@ -208,5 +223,65 @@ describe('generateScheduleAnnouncement', () => {
   it('uses header month from the first entry', () => {
     const result = generateScheduleAnnouncement(entries, new Date(2026, 0, 7));
     expect(result).toContain('#あ茶会 1月の予定をお知らせします');
+  });
+});
+
+describe('generateDiscordWeeklyMessage', () => {
+  it('確定済みエントリにはワールド名と作者を含む', () => {
+    const entries = [
+      { date: '2026/03/29', meetingNumber: 262, worldName: '星空の回廊', creator: 'testuser', confirmed: true, worldUrl: '' },
+    ];
+    const msg = generateDiscordWeeklyMessage(entries, new Date(2026, 2, 25));
+    expect(msg).toContain('星空の回廊');
+    expect(msg).toContain('testuser');
+    expect(msg).toContain('第262回');
+  });
+
+  it('確定済みでURLがある場合はURLを含む', () => {
+    const entries = [
+      { date: '2026/03/29', meetingNumber: 262, worldName: '星空の回廊', creator: 'testuser', confirmed: true, worldUrl: 'https://vrchat.com/home/world/wrld_xxx' },
+    ];
+    const msg = generateDiscordWeeklyMessage(entries, new Date(2026, 2, 25));
+    expect(msg).toContain('https://vrchat.com/home/world/wrld_xxx');
+  });
+
+  it('確定済みでURLがない場合はURLリンク行を含まない', () => {
+    const entries = [
+      { date: '2026/03/29', meetingNumber: 262, worldName: '星空の回廊', creator: 'testuser', confirmed: true, worldUrl: '' },
+    ];
+    const msg = generateDiscordWeeklyMessage(entries, new Date(2026, 2, 25));
+    expect(msg).not.toContain('🔗');
+  });
+
+  it('未確定エントリには「まだ決まっていません」を含む', () => {
+    const entries = [
+      { date: '2026/03/29', meetingNumber: 262, worldName: '', creator: '', confirmed: false, worldUrl: '' },
+    ];
+    const msg = generateDiscordWeeklyMessage(entries, new Date(2026, 2, 25));
+    expect(msg).toContain('まだ決まっていません');
+  });
+
+  it('お休み（meetingNumber null）には「お休み」を含む', () => {
+    const entries = [
+      { date: '2026/03/29', meetingNumber: null, worldName: '', creator: '', confirmed: false, worldUrl: '' },
+    ];
+    const msg = generateDiscordWeeklyMessage(entries, new Date(2026, 2, 25));
+    expect(msg).toContain('お休み');
+  });
+
+  it('該当エントリがない場合はその旨を伝える', () => {
+    const entries = [
+      { date: '2026/04/05', meetingNumber: 263, worldName: 'W', creator: 'C', confirmed: true, worldUrl: '' },
+    ];
+    const msg = generateDiscordWeeklyMessage(entries, new Date(2026, 2, 25));
+    expect(msg).toContain('予定が見つかりません');
+  });
+
+  it('水曜から次の日曜を正しく計算する', () => {
+    const entries = [
+      { date: '2026/03/29', meetingNumber: 262, worldName: 'テストワールド', creator: 'テスト作者', confirmed: true, worldUrl: '' },
+    ];
+    const msg = generateDiscordWeeklyMessage(entries, new Date(2026, 2, 25));
+    expect(msg).toContain('3/29');
   });
 });
