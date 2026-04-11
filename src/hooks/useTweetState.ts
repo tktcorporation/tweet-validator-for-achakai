@@ -271,27 +271,6 @@ export function useTweetState() {
     loadSheetSchedule();
   }, [loadSheetSchedule]);
 
-  // 今週エントリのURLが変わるたびに VRChat API からワールド詳細を取得する。
-  // CORS またはセッション未ログイン時は null のまま（フォールバック表示に任せる）。
-  useEffect(() => {
-    const url = thisWeekEntry?.worldUrl;
-    if (!url) {
-      setVrchatWorldInfo(null);
-      return;
-    }
-    const worldId = extractVRChatWorldId(url);
-    if (!worldId) {
-      setVrchatWorldInfo(null);
-      return;
-    }
-    setIsVrchatWorldLoading(true);
-    setVrchatWorldInfo(null);
-    fetchVRChatWorldInfo(worldId).then(info => {
-      setVrchatWorldInfo(info);
-      setIsVrchatWorldLoading(false);
-    });
-  }, [thisWeekEntry?.worldUrl]);
-
   useEffect(() => {
     setCharCount(countTweetLength(tweetText));
     setAnimateCount(true);
@@ -341,6 +320,28 @@ export function useTweetState() {
     return d;
   })();
   const thisWeekEntry = findEntryByDate(sheetSchedule, upcomingSunday);
+
+  // 今週エントリのURLが変わるたびに VRChat API からワールド詳細を取得する。
+  // thisWeekEntry の宣言より後に配置することで TDZ エラーを防ぐ。
+  // CORS またはセッション未ログイン時は null のまま（フォールバック表示に任せる）。
+  useEffect(() => {
+    const url = thisWeekEntry?.worldUrl;
+    if (!url) {
+      setVrchatWorldInfo(null);
+      return;
+    }
+    const worldId = extractVRChatWorldId(url);
+    if (!worldId) {
+      setVrchatWorldInfo(null);
+      return;
+    }
+    setIsVrchatWorldLoading(true);
+    setVrchatWorldInfo(null);
+    fetchVRChatWorldInfo(worldId).then(info => {
+      setVrchatWorldInfo(info);
+      setIsVrchatWorldLoading(false);
+    });
+  }, [thisWeekEntry?.worldUrl]);
 
   const generateThisWeeksSchedule = () => {
     if (
