@@ -305,6 +305,15 @@ export function useTweetState() {
   const referenceDate = new Date('2025-12-21');
   const referenceMeetingNumber = 253;
 
+  // 今週（直近の日曜日）のスケジュールエントリを取得
+  const upcomingSunday = (() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    while (d.getDay() !== 0) d.setDate(d.getDate() + 1);
+    return d;
+  })();
+  const thisWeekEntry = findEntryByDate(sheetSchedule, upcomingSunday);
+
   const generateThisWeeksSchedule = () => {
     if (
       tweetText.trim() !== '' ||
@@ -491,6 +500,7 @@ export function useTweetState() {
     sheetError,
     sheetSchedule,
     loadSheetSchedule,
+    thisWeekEntry,
   };
 }
 

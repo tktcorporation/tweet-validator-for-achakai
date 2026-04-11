@@ -8,8 +8,10 @@ export interface ScheduleEntry {
   creator: string;
   /** スプレッドシートの「確定」チェックボックスの状態。TRUE なら確定済み。 */
   confirmed: boolean;
-  /** ワールドのURL（スプレッドシート7行目） */
+  /** ワールドのURL（スプレッドシート「url」行） */
   worldUrl: string;
+  /** ワールドの説明文（スプレッドシート「説明」行）。未記入時は空文字。 */
+  worldDescription: string;
 }
 
 export async function fetchScheduleFromSheet(): Promise<ScheduleEntry[]> {
@@ -84,6 +86,7 @@ export function parseScheduleCSV(csv: string): ScheduleEntry[] {
   // スプレッドシートの確定チェックボックス行（"TRUE" / "FALSE"）
   const confirmedRow = findRow('チェックが入っていたら確定分');
   const urlRow = findRow('url');
+  const descriptionRow = findRow('説明');
 
   if (!dateRow || !meetingRow) return [];
 
@@ -106,6 +109,7 @@ export function parseScheduleCSV(csv: string): ScheduleEntry[] {
       creator: creatorRow?.[i]?.trim() || '',
       confirmed: confirmedRow?.[i]?.trim().toUpperCase() === 'TRUE',
       worldUrl: urlRow?.[i]?.trim() || '',
+      worldDescription: descriptionRow?.[i]?.trim() || '',
     });
   }
 

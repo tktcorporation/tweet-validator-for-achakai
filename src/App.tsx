@@ -16,6 +16,8 @@ import {
   Edit3,
   Eye,
   Megaphone,
+  ExternalLink,
+  FileText,
 } from 'lucide-react';
 import useTweetState, { instrumentEmojiArray } from './hooks/useTweetState';
 
@@ -53,6 +55,7 @@ function App() {
     sheetError,
     sheetSchedule,
     loadSheetSchedule,
+    thisWeekEntry,
   } = useTweetState();
 
   const [isEmojiSectionOpen, setIsEmojiSectionOpen] = useState(false);
@@ -193,6 +196,29 @@ function App() {
                 <p className="text-sm text-neutral-medium py-3 text-center">
                   データがありません
                 </p>
+              )}
+              {/* 今週のワールド詳細（URL・説明） */}
+              {!isSheetLoading && thisWeekEntry && thisWeekEntry.meetingNumber !== null && (thisWeekEntry.worldUrl || thisWeekEntry.worldDescription) && (
+                <div className="mt-3 p-3 bg-brand-primary/5 border border-brand-primary/20 rounded-lg">
+                  <p className="text-xs font-semibold text-brand-primary mb-2">今週のワールド詳細</p>
+                  {thisWeekEntry.worldUrl && (
+                    <a
+                      href={thisWeekEntry.worldUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 hover:underline mb-1.5 break-all"
+                    >
+                      <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                      {thisWeekEntry.worldUrl}
+                    </a>
+                  )}
+                  {thisWeekEntry.worldDescription && (
+                    <div className="flex items-start gap-1.5 text-xs text-neutral-dark">
+                      <FileText className="w-3 h-3 flex-shrink-0 mt-0.5 text-neutral-medium" />
+                      <p className="whitespace-pre-wrap">{thisWeekEntry.worldDescription}</p>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           )}
