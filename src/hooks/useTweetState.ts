@@ -6,6 +6,11 @@ import {
   generateScheduleAnnouncement,
   type ScheduleEntry,
 } from '../lib/fetchSheetSchedule';
+import {
+  extractVRChatWorldId,
+  fetchVRChatWorldInfo,
+  type VRChatWorldInfo,
+} from '../lib/fetchVRChatWorld';
 
 export const instrumentEmojiArray = '🎸 🎹 🥁 🎺 🎻 🎷 🪕 🪗 🎤 🎧 📯 🪘 🎼'.split(' ');
 
@@ -242,6 +247,8 @@ export function useTweetState() {
   const [sheetSkippedDates, setSheetSkippedDates] = useState<Date[]>(skippedDates);
   const [isSheetLoading, setIsSheetLoading] = useState(false);
   const [sheetError, setSheetError] = useState<string | null>(null);
+  const [vrchatWorldInfo, setVrchatWorldInfo] = useState<VRChatWorldInfo | null>(null);
+  const [isVrchatWorldLoading, setIsVrchatWorldLoading] = useState(false);
 
   const loadSheetSchedule = useCallback(async () => {
     setIsSheetLoading(true);
@@ -263,6 +270,27 @@ export function useTweetState() {
   useEffect(() => {
     loadSheetSchedule();
   }, [loadSheetSchedule]);
+
+  // 今週エントリのURLが変わるたびに VRChat API からワールド詳細を取得する。
+  // CORS またはセッション未ログイン時は null のまま（フォールバック表示に任せる）。
+  useEffect(() => {
+    const url = thisWeekEntry?.worldUrl;
+    if (!url) {
+      setVrchatWorldInfo(null);
+      return;
+    }
+    const worldId = extractVRChatWorldId(url);
+    if (!worldId) {
+      setVrchatWorldInfo(null);
+      return;
+    }
+    setIsVrchatWorldLoading(true);
+    setVrchatWorldInfo(null);
+    fetchVRChatWorldInfo(worldId).then(info => {
+      setVrchatWorldInfo(info);
+      setIsVrchatWorldLoading(false);
+    });
+  }, [thisWeekEntry?.worldUrl]);
 
   useEffect(() => {
     setCharCount(countTweetLength(tweetText));
@@ -501,6 +529,8 @@ export function useTweetState() {
     sheetSchedule,
     loadSheetSchedule,
     thisWeekEntry,
+    vrchatWorldInfo,
+    isVrchatWorldLoading,
   };
 }
 
