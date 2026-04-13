@@ -16,6 +16,8 @@ import {
   Edit3,
   Eye,
   Megaphone,
+  ExternalLink,
+  FileText,
 } from 'lucide-react';
 import useTweetState, { instrumentEmojiArray } from './hooks/useTweetState';
 
@@ -53,6 +55,9 @@ function App() {
     sheetError,
     sheetSchedule,
     loadSheetSchedule,
+    thisWeekEntry,
+    vrchatWorldInfo,
+    isVrchatWorldLoading,
   } = useTweetState();
 
   const [isEmojiSectionOpen, setIsEmojiSectionOpen] = useState(false);
@@ -193,6 +198,40 @@ function App() {
                 <p className="text-sm text-neutral-medium py-3 text-center">
                   データがありません
                 </p>
+              )}
+              {/* 今週のワールド詳細（URL・説明） */}
+              {!isSheetLoading && thisWeekEntry && thisWeekEntry.meetingNumber !== null && thisWeekEntry.worldUrl && (
+                <div className="mt-3 p-3 bg-brand-primary/5 border border-brand-primary/20 rounded-lg">
+                  <p className="text-xs font-semibold text-brand-primary mb-2">今週のワールド詳細</p>
+                  {/* URL リンク */}
+                  <a
+                    href={thisWeekEntry.worldUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 hover:underline mb-2 break-all"
+                  >
+                    <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                    {thisWeekEntry.worldUrl}
+                  </a>
+                  {/* VRChat API から取得した説明（取得中・取得済み・フォールバック） */}
+                  {isVrchatWorldLoading ? (
+                    <div className="flex items-center gap-1.5 text-xs text-neutral-medium">
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      VRChat からワールド情報を取得中...
+                    </div>
+                  ) : vrchatWorldInfo?.description ? (
+                    <div className="flex items-start gap-1.5 text-xs text-neutral-dark">
+                      <FileText className="w-3 h-3 flex-shrink-0 mt-0.5 text-neutral-medium" />
+                      <p className="whitespace-pre-wrap">{vrchatWorldInfo.description}</p>
+                    </div>
+                  ) : thisWeekEntry.worldDescription ? (
+                    // VRChat API が取得できなかった場合はスプレッドシートの説明を表示
+                    <div className="flex items-start gap-1.5 text-xs text-neutral-dark">
+                      <FileText className="w-3 h-3 flex-shrink-0 mt-0.5 text-neutral-medium" />
+                      <p className="whitespace-pre-wrap">{thisWeekEntry.worldDescription}</p>
+                    </div>
+                  ) : null}
+                </div>
               )}
             </div>
           )}

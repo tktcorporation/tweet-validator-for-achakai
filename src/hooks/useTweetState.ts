@@ -6,6 +6,11 @@ import {
   generateScheduleAnnouncement,
   type ScheduleEntry,
 } from '../lib/fetchSheetSchedule';
+import {
+  extractVRChatWorldId,
+  fetchVRChatWorldInfo,
+  type VRChatWorldInfo,
+} from '../lib/fetchVRChatWorld';
 
 export const instrumentEmojiArray = '🎸 🎹 🥁 🎺 🎻 🎷 🪕 🪗 🎤 🎧 📯 🪘 🎼'.split(' ');
 
@@ -242,6 +247,8 @@ export function useTweetState() {
   const [sheetSkippedDates, setSheetSkippedDates] = useState<Date[]>(skippedDates);
   const [isSheetLoading, setIsSheetLoading] = useState(false);
   const [sheetError, setSheetError] = useState<string | null>(null);
+  const [vrchatWorldInfo, setVrchatWorldInfo] = useState<VRChatWorldInfo | null>(null);
+  const [isVrchatWorldLoading, setIsVrchatWorldLoading] = useState(false);
 
   const loadSheetSchedule = useCallback(async () => {
     setIsSheetLoading(true);
@@ -304,6 +311,37 @@ export function useTweetState() {
 
   const referenceDate = new Date('2025-12-21');
   const referenceMeetingNumber = 253;
+
+  // 今週（直近の日曜日）のスケジュールエントリを取得
+  const upcomingSunday = (() => {
+    const d = new Date();
+    d.setHours(0, 0, 0, 0);
+    while (d.getDay() !== 0) d.setDate(d.getDate() + 1);
+    return d;
+  })();
+  const thisWeekEntry = findEntryByDate(sheetSchedule, upcomingSunday);
+
+  // 今週エントリのURLが変わるたびに VRChat API からワールド詳細を取得する。
+  // thisWeekEntry の宣言より後に配置することで TDZ エラーを防ぐ。
+  // CORS またはセッション未ログイン時は null のまま（フォールバック表示に任せる）。
+  useEffect(() => {
+    const url = thisWeekEntry?.worldUrl;
+    if (!url) {
+      setVrchatWorldInfo(null);
+      return;
+    }
+    const worldId = extractVRChatWorldId(url);
+    if (!worldId) {
+      setVrchatWorldInfo(null);
+      return;
+    }
+    setIsVrchatWorldLoading(true);
+    setVrchatWorldInfo(null);
+    fetchVRChatWorldInfo(worldId).then(info => {
+      setVrchatWorldInfo(info);
+      setIsVrchatWorldLoading(false);
+    });
+  }, [thisWeekEntry?.worldUrl]);
 
   const generateThisWeeksSchedule = () => {
     if (
@@ -491,6 +529,9 @@ export function useTweetState() {
     sheetError,
     sheetSchedule,
     loadSheetSchedule,
+    thisWeekEntry,
+    vrchatWorldInfo,
+    isVrchatWorldLoading,
   };
 }
 
