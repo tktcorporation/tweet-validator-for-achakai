@@ -37,7 +37,14 @@ describe('parseStructuredFields', () => {
 
 describe('buildStructuredTweet', () => {
   it('replaces placeholders and emoji', () => {
-    const result = buildStructuredTweet(template, 'test', 'World', 'Creator', '🎹', '🎪');
+    const result = buildStructuredTweet(
+      template,
+      'test',
+      'World',
+      'Creator',
+      '🎹',
+      '🎪',
+    );
     expect(result).toContain('第210回 🎹題名のないお茶会');
     expect(result).toContain('題名のないお茶会🎪');
     expect(result).toContain('【場所】World By Creator');
@@ -45,7 +52,14 @@ describe('buildStructuredTweet', () => {
   });
 
   it('supports multi-line free text', () => {
-    const result = buildStructuredTweet(template, 'line1\nline2', 'World', 'Creator', '🎻', '🏠');
+    const result = buildStructuredTweet(
+      template,
+      'line1\nline2',
+      'World',
+      'Creator',
+      '🎻',
+      '🏠',
+    );
     expect(result.startsWith('line1\nline2 #あ茶会')).toBe(true);
   });
 
@@ -63,11 +77,18 @@ describe('buildStructuredTweet', () => {
       '【参加方法】Group＋「題名のないお茶会」にjoin',
     ];
     const result = buildStructuredTweet(
-      templateWithMultiline, 'test', multilineWorld, creator, '🎷', '🍫',
+      templateWithMultiline,
+      'test',
+      multilineWorld,
+      creator,
+      '🎷',
+      '🍫',
     );
     const occurrences = result.split('（メタバースヨコスカ）').length - 1;
     expect(occurrences).toBe(1);
-    expect(result).toContain(`【場所】DOBUITA ＆ MIKASA WORLD\n（メタバースヨコスカ） By MetasukaVR`);
+    expect(result).toContain(
+      `【場所】DOBUITA ＆ MIKASA WORLD\n（メタバースヨコスカ） By MetasukaVR`,
+    );
     expect(result).toContain('【参加方法】');
   });
 });
@@ -80,9 +101,12 @@ describe('extractLocation', () => {
   });
 
   it('extracts multiline location', () => {
-    const text = '【場所】DOBUITA ＆ MIKASA WORLD\n（メタバースヨコスカ） By MetasukaVR\n【参加方法】join';
+    const text =
+      '【場所】DOBUITA ＆ MIKASA WORLD\n（メタバースヨコスカ） By MetasukaVR\n【参加方法】join';
     const result = extractLocation(text);
-    expect(result?.world).toBe('DOBUITA ＆ MIKASA WORLD\n（メタバースヨコスカ）');
+    expect(result?.world).toBe(
+      'DOBUITA ＆ MIKASA WORLD\n（メタバースヨコスカ）',
+    );
     expect(result?.creator).toBe('MetasukaVR');
   });
 
@@ -115,9 +139,16 @@ describe('validateTweet', () => {
     const tweet =
       'テスト #あ茶会\n\n第259回 🎸題名のないお茶会🏘️\n【日時】3月1日(日) 14:30〜16:00\n【場所】DOBUITA ＆ MIKASA WORLD\n（メタバースヨコスカ） By MetasukaVR\n【参加方法】Group＋「題名のないお茶会」にjoin';
     const currentDate = new Date('2026-02-23');
-    const result = validateTweet(tweet, new Date('2025-12-21'), 253, currentDate);
+    const result = validateTweet(
+      tweet,
+      new Date('2025-12-21'),
+      253,
+      currentDate,
+    );
     expect(result.hasValidLocation).toBe(true);
-    expect(result.extractedInfo.worldName).toBe('DOBUITA ＆ MIKASA WORLD\n（メタバースヨコスカ）');
+    expect(result.extractedInfo.worldName).toBe(
+      'DOBUITA ＆ MIKASA WORLD\n（メタバースヨコスカ）',
+    );
     expect(result.extractedInfo.creator).toBe('MetasukaVR');
     expect(result.isValid).toBe(true);
   });
@@ -128,7 +159,12 @@ describe('validateTweet', () => {
       const tweet =
         'テスト #あ茶会\n\n第253回 🎸題名のないお茶会🏘️\n【日時】12月21日(日) 14:30〜16:00\n【場所】TestWorld By Creator\n【参加方法】Group＋「題名のないお茶会」にjoin';
       const currentDate = new Date('2025-12-20');
-      const result = validateTweet(tweet, new Date('2025-12-21'), 253, currentDate);
+      const result = validateTweet(
+        tweet,
+        new Date('2025-12-21'),
+        253,
+        currentDate,
+      );
       expect(result.isSunday).toBe(true);
       expect(result.expectedMeetingNumber).toBe(253);
       expect(result.isCorrectMeeting).toBe(true);
@@ -142,7 +178,12 @@ describe('validateTweet', () => {
       const tweet =
         'テスト #あ茶会\n\n第254回 🎸題名のないお茶会🏘️\n【日時】1月11日(日) 14:30〜16:00\n【場所】TestWorld By Creator\n【参加方法】Group＋「題名のないお茶会」にjoin';
       const currentDate = new Date('2026-01-10');
-      const result = validateTweet(tweet, new Date('2025-12-21'), 253, currentDate);
+      const result = validateTweet(
+        tweet,
+        new Date('2025-12-21'),
+        253,
+        currentDate,
+      );
       expect(result.isSunday).toBe(true);
       expect(result.expectedMeetingNumber).toBe(254);
       expect(result.isCorrectMeeting).toBe(true);
@@ -155,7 +196,12 @@ describe('validateTweet', () => {
       const tweet =
         'テスト #あ茶会\n\n第255回 🎸題名のないお茶会🏘️\n【日時】1月18日(日) 14:30〜16:00\n【場所】TestWorld By Creator\n【参加方法】Group＋「題名のないお茶会」にjoin';
       const currentDate = new Date('2026-01-12');
-      const result = validateTweet(tweet, new Date('2025-12-21'), 253, currentDate);
+      const result = validateTweet(
+        tweet,
+        new Date('2025-12-21'),
+        253,
+        currentDate,
+      );
       expect(result.isSunday).toBe(true);
       expect(result.expectedMeetingNumber).toBe(255);
       expect(result.isCorrectMeeting).toBe(true);
@@ -168,7 +214,12 @@ describe('validateTweet', () => {
       const tweet =
         'テスト #あ茶会\n\n第256回 🎸題名のないお茶会🏘️\n【日時】2月1日(日) 14:30〜16:00\n【場所】TestWorld By Creator\n【参加方法】Group＋「題名のないお茶会」にjoin';
       const currentDate = new Date('2026-01-26');
-      const result = validateTweet(tweet, new Date('2025-12-21'), 253, currentDate);
+      const result = validateTweet(
+        tweet,
+        new Date('2025-12-21'),
+        253,
+        currentDate,
+      );
       expect(result.isSunday).toBe(true);
       expect(result.expectedMeetingNumber).toBe(256);
       expect(result.isCorrectMeeting).toBe(true);
@@ -181,7 +232,12 @@ describe('validateTweet', () => {
       const tweet =
         'テスト #あ茶会\n\n第259回 🎸題名のないお茶会🏘️\n【日時】3月1日(日) 14:30〜16:00\n【場所】TestWorld By Creator\n【参加方法】Group＋「題名のないお茶会」にjoin';
       const currentDate = new Date('2026-02-23');
-      const result = validateTweet(tweet, new Date('2025-12-21'), 253, currentDate);
+      const result = validateTweet(
+        tweet,
+        new Date('2025-12-21'),
+        253,
+        currentDate,
+      );
       expect(result.isSunday).toBe(true);
       expect(result.expectedMeetingNumber).toBe(259);
       expect(result.isCorrectMeeting).toBe(true);
@@ -194,7 +250,12 @@ describe('validateTweet', () => {
       const tweet =
         'テスト #あ茶会\n\n第260回 🎸題名のないお茶会🏘️\n【日時】3月15日(日) 14:30〜16:00\n【場所】TestWorld By Creator\n【参加方法】Group＋「題名のないお茶会」にjoin';
       const currentDate = new Date('2026-03-09');
-      const result = validateTweet(tweet, new Date('2025-12-21'), 253, currentDate);
+      const result = validateTweet(
+        tweet,
+        new Date('2025-12-21'),
+        253,
+        currentDate,
+      );
       expect(result.isSunday).toBe(true);
       expect(result.expectedMeetingNumber).toBe(260);
       expect(result.isCorrectMeeting).toBe(true);
@@ -207,7 +268,12 @@ describe('validateTweet', () => {
       const tweet =
         'テスト #あ茶会\n\n第266回 🎸題名のないお茶会🏘️\n【日時】5月3日(日) 14:30〜16:00\n【場所】TestWorld By Creator\n【参加方法】Group＋「題名のないお茶会」にjoin';
       const currentDate = new Date('2026-04-27');
-      const result = validateTweet(tweet, new Date('2025-12-21'), 253, currentDate);
+      const result = validateTweet(
+        tweet,
+        new Date('2025-12-21'),
+        253,
+        currentDate,
+      );
       expect(result.isSunday).toBe(true);
       expect(result.expectedMeetingNumber).toBe(266);
       expect(result.isCorrectMeeting).toBe(true);
@@ -218,7 +284,12 @@ describe('validateTweet', () => {
       const tweet =
         'テスト #あ茶会\n\n第254回 🎸題名のないお茶会🏘️\n【日時】1月11日(日) 14:30〜16:00\n【場所】TestWorld By Creator\n【参加方法】Group＋「題名のないお茶会」にjoin';
       const currentDate = new Date('2025-12-20');
-      const result = validateTweet(tweet, new Date('2025-12-21'), 253, currentDate);
+      const result = validateTweet(
+        tweet,
+        new Date('2025-12-21'),
+        253,
+        currentDate,
+      );
       expect(result.isSunday).toBe(true);
       expect(result.expectedMeetingNumber).toBe(254);
       expect(result.isCorrectMeeting).toBe(true);

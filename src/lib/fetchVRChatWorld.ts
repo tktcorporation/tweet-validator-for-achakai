@@ -38,7 +38,9 @@ export function extractVRChatWorldId(url: string): string | null {
  *
  * 呼び出し元: src/hooks/useTweetState.ts (thisWeekEntry.worldUrl 変化時)
  */
-export async function fetchVRChatWorldInfo(worldId: string): Promise<VRChatWorldInfo | null> {
+export async function fetchVRChatWorldInfo(
+  worldId: string,
+): Promise<VRChatWorldInfo | null> {
   try {
     const res = await fetch(
       `https://api.vrchat.cloud/api/1/worlds/${worldId}`,

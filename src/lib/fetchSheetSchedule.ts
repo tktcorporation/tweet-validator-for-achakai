@@ -17,7 +17,8 @@ export interface ScheduleEntry {
 export async function fetchScheduleFromSheet(): Promise<ScheduleEntry[]> {
   const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=${SCHEDULE_SHEET_GID}`;
   const response = await fetch(url);
-  if (!response.ok) throw new Error(`Failed to fetch schedule: ${response.status}`);
+  if (!response.ok)
+    throw new Error(`Failed to fetch schedule: ${response.status}`);
   const csv = await response.text();
   return parseScheduleCSV(csv);
 }
@@ -49,7 +50,10 @@ export function parseCSV(text: string): string[][] {
       } else if (ch === ',') {
         currentRow.push(currentField);
         currentField = '';
-      } else if (ch === '\n' || (ch === '\r' && i + 1 < text.length && text[i + 1] === '\n')) {
+      } else if (
+        ch === '\n' ||
+        (ch === '\r' && i + 1 < text.length && text[i + 1] === '\n')
+      ) {
         currentRow.push(currentField);
         currentField = '';
         rows.push(currentRow);
@@ -77,7 +81,7 @@ export function parseCSV(text: string): string[][] {
 export function parseScheduleCSV(csv: string): ScheduleEntry[] {
   const rows = parseCSV(csv);
 
-  const findRow = (header: string) => rows.find(r => r[0]?.trim() === header);
+  const findRow = (header: string) => rows.find((r) => r[0]?.trim() === header);
 
   const dateRow = findRow('開催予定日');
   const meetingRow = findRow('開催回数');
@@ -98,9 +102,8 @@ export function parseScheduleCSV(csv: string): ScheduleEntry[] {
     if (!dateStr) continue;
 
     const meetingStr = meetingRow[i]?.trim() || '';
-    const meetingNumber = meetingStr && meetingStr !== '-'
-      ? parseInt(meetingStr, 10)
-      : null;
+    const meetingNumber =
+      meetingStr && meetingStr !== '-' ? parseInt(meetingStr, 10) : null;
 
     entries.push({
       date: dateStr,
@@ -130,14 +133,14 @@ export function findEntryByDate(
   date: Date,
 ): ScheduleEntry | undefined {
   const target = formatDateForSheet(date);
-  return entries.find(e => e.date === target);
+  return entries.find((e) => e.date === target);
 }
 
 /** Derive skipped dates from sheet data (entries with no meeting number) */
 export function deriveSkippedDates(entries: ScheduleEntry[]): Date[] {
   return entries
-    .filter(e => e.meetingNumber === null)
-    .map(e => {
+    .filter((e) => e.meetingNumber === null)
+    .map((e) => {
       const [y, m, d] = e.date.split('/').map(Number);
       return new Date(y, m - 1, d);
     });
@@ -156,7 +159,8 @@ export function generateDiscordWeeklyMessage(
   // 次の日曜を求める（当日が日曜ならその日）
   const nextSunday = new Date(currentDate);
   nextSunday.setHours(0, 0, 0, 0);
-  while (nextSunday.getDay() !== 0) nextSunday.setDate(nextSunday.getDate() + 1);
+  while (nextSunday.getDay() !== 0)
+    nextSunday.setDate(nextSunday.getDate() + 1);
 
   const m = nextSunday.getMonth() + 1;
   const d = nextSunday.getDate();
@@ -202,15 +206,18 @@ export function generateScheduleAnnouncement(
   // Find the nearest upcoming Sunday (including today)
   const startSunday = new Date(currentDate);
   startSunday.setHours(0, 0, 0, 0);
-  while (startSunday.getDay() !== 0) startSunday.setDate(startSunday.getDate() + 1);
+  while (startSunday.getDay() !== 0)
+    startSunday.setDate(startSunday.getDate() + 1);
 
   // Filter entries from startSunday onward
-  const upcoming = entries.filter(e => {
-    const [y, m, d] = e.date.split('/').map(Number);
-    const entryDate = new Date(y, m - 1, d);
-    entryDate.setHours(0, 0, 0, 0);
-    return entryDate >= startSunday;
-  }).slice(0, weeksCount);
+  const upcoming = entries
+    .filter((e) => {
+      const [y, m, d] = e.date.split('/').map(Number);
+      const entryDate = new Date(y, m - 1, d);
+      entryDate.setHours(0, 0, 0, 0);
+      return entryDate >= startSunday;
+    })
+    .slice(0, weeksCount);
 
   if (upcoming.length === 0) return '';
 
