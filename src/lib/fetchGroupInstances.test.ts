@@ -16,11 +16,14 @@ describe('fetchGroupInstances', () => {
     globalThis.fetch = originalFetch;
   });
 
+  // Zod スキーマが usr_/grp_/authcookie_ + UUID(8-4-4-4-12 hex) の形式を要求するため、
+  // テストでも有効な UUID 形式のダミー値を使用する。
   const baseOptions = {
-    userId: 'usr_abc',
-    groupId: 'grp_xyz',
-    authCookie: 'authcookie_val',
+    userId: 'usr_abcdef01-2345-6789-abcd-ef0123456789',
+    groupId: 'grp_abcdef01-2345-6789-abcd-ef0123456789',
+    authCookie: 'authcookie_abcdef01-2345-6789-abcd-ef0123456789',
   };
+  const AUTH_COOKIE_HEADER = `auth=${baseOptions.authCookie}`;
 
   // 実 API のレスポンス形状を再現した mock helper。
   // 2026-04 時点で VRChat API が返す top-level は `{fetchedAt, instances: [...]}`
@@ -56,10 +59,10 @@ describe('fetchGroupInstances', () => {
     const result = await fetchGroupInstances(baseOptions);
 
     expect(mockFetch).toHaveBeenCalledWith(
-      'https://api.vrchat.cloud/api/1/users/usr_abc/instances/groups/grp_xyz',
+      `https://api.vrchat.cloud/api/1/users/${baseOptions.userId}/instances/groups/${baseOptions.groupId}`,
       expect.objectContaining({
         headers: expect.objectContaining({
-          Cookie: 'auth=authcookie_val',
+          Cookie: AUTH_COOKIE_HEADER,
         }),
       }),
     );
@@ -125,11 +128,150 @@ describe('fetchGroupInstances', () => {
     expect(result[0].worldId).toBe('wrld_legacy');
   });
 
-  it('Cookie 値にセミコロンが含まれていたら例外を投げる', async () => {
+  it('userId が VRChat の形式でなければ fetch 前にスキーマエラーを投げる', async () => {
+    await expect(
+      fetchGroupInstances({ ...baseOptions, userId: 'usr_abc' }),
+    ).rejects.toThrow(/Invalid fetchGroupInstances options.*userId/);
+    expect(vi.mocked(globalThis.fetch)).not.toHaveBeenCalled();
+  });
+
+  it('groupId が VRChat の形式でなければ fetch 前にスキーマエラーを投げる', async () => {
+    await expect(
+      fetchGroupInstances({ ...baseOptions, groupId: 'grp_xyz' }),
+    ).rejects.toThrow(/Invalid fetchGroupInstances options.*groupId/);
+    expect(vi.mocked(globalThis.fetch)).not.toHaveBeenCalled();
+  });
+
+  it('authCookie が authcookie_<uuid> 形式でなければ fetch 前にスキーマエラーを投げる', async () => {
     await expect(
       fetchGroupInstances({ ...baseOptions, authCookie: 'bad;value' }),
-    ).rejects.toThrow(/Cookie value must not contain/);
-    // セミコロンチェックは fetch 前で行う
+    ).rejects.toThrow(/Invalid fetchGroupInstances options.*authCookie/);
+    expect(vi.mocked(globalThis.fetch)).not.toHaveBeenCalled();
+  });
+
+  // Cookie の値本体だけを登録する運用のため、`auth=` を含めて登録する
+  // よくある設定ミスをスキーマ段階で弾けることを保証する
+  it('authCookie に "auth=" プレフィックスが含まれていたら fetch 前にスキーマエラーを投げる', async () => {
+    await expect(
+      fetchGroupInstances({
+        ...baseOptions,
+        authCookie: `auth=${baseOptions.authCookie}`,
+      }),
+    ).rejects.toThrow(/Invalid fetchGroupInstances options.*authCookie/);
+    expect(vi.mocked(globalThis.fetch)).not.toHaveBeenCalled();
+  });
+
+  // prefix ごとスキーマを分けているので、userId と groupId を取り違えた secret 登録は
+  // runtime Zod で弾かれる（branded types の代替として働く）
+  it('userId に grp_ プレフィックスの値を渡すと fetch 前にスキーマエラーを投げる', async () => {
+    await expect(
+      fetchGroupInstances({
+        ...baseOptions,
+        userId: baseOptions.groupId,
+      }),
+    ).rejects.toThrow(/Invalid fetchGroupInstances options.*userId/);
+    expect(vi.mocked(globalThis.fetch)).not.toHaveBeenCalled();
+  });
+
+  it('groupId に usr_ プレフィックスの値を渡すと fetch 前にスキーマエラーを投げる', async () => {
+    await expect(
+      fetchGroupInstances({
+        ...baseOptions,
+        groupId: baseOptions.userId,
+      }),
+    ).rejects.toThrow(/Invalid fetchGroupInstances options.*groupId/);
+    expect(vi.mocked(globalThis.fetch)).not.toHaveBeenCalled();
+  });
+
+  it('twoFactorAuthCookie を JWT で渡すと Cookie ヘッダに併送される', async () => {
+    const mockFetch = vi.mocked(globalThis.fetch);
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify(realResponse([])), { status: 200 }),
+    );
+
+    const jwt = 'aGVhZGVy.cGF5bG9hZA.c2ln';
+    await fetchGroupInstances({
+      ...baseOptions,
+      twoFactorAuthCookie: jwt,
+    });
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Cookie: `${AUTH_COOKIE_HEADER}; twoFactorAuth=${jwt}`,
+        }),
+      }),
+    );
+  });
+
+  // ブラウザから Cookie をコピーしてくると base64url の末尾 `=` パディングが
+  // 混入するケースがある。regex が `=*` で許容することを契約として固定しておく。
+  it('twoFactorAuthCookie の各セグメントに = パディングがあっても許容する', async () => {
+    const mockFetch = vi.mocked(globalThis.fetch);
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify(realResponse([])), { status: 200 }),
+    );
+
+    const paddedJwt = 'aGVhZGVy==.cGF5bG9hZA==.c2ln==';
+    await fetchGroupInstances({
+      ...baseOptions,
+      twoFactorAuthCookie: paddedJwt,
+    });
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Cookie: `${AUTH_COOKIE_HEADER}; twoFactorAuth=${paddedJwt}`,
+        }),
+      }),
+    );
+  });
+
+  it('twoFactorAuthCookie が未指定なら auth のみ送る', async () => {
+    const mockFetch = vi.mocked(globalThis.fetch);
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify(realResponse([])), { status: 200 }),
+    );
+
+    await fetchGroupInstances(baseOptions);
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Cookie: AUTH_COOKIE_HEADER,
+        }),
+      }),
+    );
+  });
+
+  it('twoFactorAuthCookie が空文字列なら auth のみ送る（未設定 secret の展開値を許容）', async () => {
+    const mockFetch = vi.mocked(globalThis.fetch);
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify(realResponse([])), { status: 200 }),
+    );
+
+    await fetchGroupInstances({ ...baseOptions, twoFactorAuthCookie: '' });
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        headers: expect.objectContaining({ Cookie: AUTH_COOKIE_HEADER }),
+      }),
+    );
+  });
+
+  it('twoFactorAuthCookie が JWT 形式でなければ fetch 前にスキーマエラーを投げる', async () => {
+    await expect(
+      fetchGroupInstances({
+        ...baseOptions,
+        twoFactorAuthCookie: 'bad;jwt',
+      }),
+    ).rejects.toThrow(
+      /Invalid fetchGroupInstances options.*twoFactorAuthCookie/,
+    );
     expect(vi.mocked(globalThis.fetch)).not.toHaveBeenCalled();
   });
 
@@ -172,24 +314,6 @@ describe('fetchGroupInstances', () => {
 
     await expect(fetchGroupInstances(baseOptions)).rejects.toThrow(
       /unexpected response shape/,
-    );
-  });
-
-  it('ユーザーID・グループIDを URL エンコードする', async () => {
-    const mockFetch = vi.mocked(globalThis.fetch);
-    mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify(realResponse([])), { status: 200 }),
-    );
-
-    await fetchGroupInstances({
-      ...baseOptions,
-      userId: 'usr a/b',
-      groupId: 'grp x',
-    });
-
-    expect(mockFetch).toHaveBeenCalledWith(
-      'https://api.vrchat.cloud/api/1/users/usr%20a%2Fb/instances/groups/grp%20x',
-      expect.any(Object),
     );
   });
 });

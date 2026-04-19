@@ -11,8 +11,42 @@
  * 呼び出し元: scripts/discord-group-instances-notify.ts (GitHub Actions)
  */
 
+import { z } from 'zod';
+
 const USER_AGENT =
   'tweet-validator-for-achakai/1.0 (+https://github.com/tktcorporation/tweet-validator-for-achakai)';
+
+// VRChat の識別子は `<prefix>_<UUID>` の形式で、UUID は 8-4-4-4-12 の hex。
+// 非公式 API のため将来変わる可能性はあるが、2026-04 現在この形式で統一されている。
+// Zod schema で形式を縛ることで、誤った Secrets を登録したときに fetch 前に検知する。
+const UUID_HEX =
+  '[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}';
+
+const VRChatUserIdSchema = z
+  .string()
+  .regex(new RegExp(`^usr_${UUID_HEX}$`), 'userId must be usr_<uuid>');
+
+const VRChatGroupIdSchema = z
+  .string()
+  .regex(new RegExp(`^grp_${UUID_HEX}$`), 'groupId must be grp_<uuid>');
+
+const VRChatAuthCookieSchema = z
+  .string()
+  .regex(
+    new RegExp(`^authcookie_${UUID_HEX}$`),
+    'authCookie must be authcookie_<uuid> (raw value only, no "auth=" prefix)',
+  );
+
+// twoFactorAuth Cookie は VRChat が発行する JWT。
+// base64url 文字 + `.` 2 つで構成される 3 セグメント形式を許容する。
+// 各セグメントの末尾 `=` パディングは RFC 7515 では禁止だが、
+// ブラウザから値をコピーしてくる経路で紛れ込む可能性があるので通す。
+const JwtSchema = z
+  .string()
+  .regex(
+    /^[A-Za-z0-9_-]+=*\.[A-Za-z0-9_-]+=*\.[A-Za-z0-9_-]+=*$/,
+    'twoFactorAuthCookie must be a JWT (three base64url segments separated by ".")',
+  );
 
 /**
  * 整形処理で利用する最小限のインスタンス情報。
@@ -75,20 +109,32 @@ function extractInstance(raw: unknown): GroupInstance | null {
 }
 
 /**
- * fetchGroupInstances の入力。全て GitHub Secrets から供給する想定。
+ * fetchGroupInstances の入力スキーマ。全て GitHub Secrets から供給する想定。
  *
- * - userId / groupId: `usr_...` / `grp_...` 形式の生ID
- * - authCookie: Cookie 値本体のみ（`auth=` プレフィックスは不要。`authcookie_...` の文字列）
+ * - userId / groupId: `usr_<uuid>` / `grp_<uuid>` の VRChat 識別子
+ * - authCookie: `auth` Cookie の値本体（`authcookie_<uuid>`。`auth=` プレフィックス不要）
+ * - twoFactorAuthCookie (任意): `twoFactorAuth` Cookie の JWT 値。
+ *   空文字列は未指定と同義で Cookie ヘッダに追加しない
+ *   （GitHub Actions の未設定 secret は `''` に展開されるため）
  *
- * 実験により、この endpoint は `auth` Cookie 単独で 200 を返すことを確認済み。
- * `twoFactorAuth` Cookie は付けても付けなくてもレスポンスが変わらないため、
- * 運用を単純化するため要求しない（30日失効 JWT の管理を避ける）。
+ * `twoFactorAuth` Cookie は運用上付けることを推奨する。
+ * 同一 IP から叩く限りは `auth` 単独でも 200 が返るが、GitHub Actions runner
+ * のように Cookie 取得元と IP が大きく離れた環境では `auth` 単独で
+ * "Missing Credentials" (401) が返るケースを確認している。
+ * JWT (30 日失効) を付与すると IP が変わっても検証に通る。
  */
-export interface FetchGroupInstancesOptions {
-  userId: string;
-  groupId: string;
-  authCookie: string;
-}
+export const FetchGroupInstancesOptionsSchema = z.object({
+  userId: VRChatUserIdSchema,
+  groupId: VRChatGroupIdSchema,
+  authCookie: VRChatAuthCookieSchema,
+  // z.literal('') を union に含めることで「未設定 secret が '' で渡る」ケースを
+  // 型の上で明示的に許容する。呼び出し側で `|| undefined` 変換しなくてもよい。
+  twoFactorAuthCookie: z.union([JwtSchema, z.literal('')]).optional(),
+});
+
+export type FetchGroupInstancesOptions = z.infer<
+  typeof FetchGroupInstancesOptionsSchema
+>;
 
 /**
  * VRChat API から指定グループのインスタンス一覧を取得する。
@@ -99,12 +145,20 @@ export interface FetchGroupInstancesOptions {
 export async function fetchGroupInstances(
   options: FetchGroupInstancesOptions,
 ): Promise<GroupInstance[]> {
-  const { userId, groupId, authCookie } = options;
+  // Parse, Don't Validate: 誤った Secrets を登録すると fetch 前に具体的な
+  // フィールド名付きで失敗するので、401/400 と比べて切り分けが容易になる。
+  const parsed = FetchGroupInstancesOptionsSchema.safeParse(options);
+  if (!parsed.success) {
+    const issues = parsed.error.issues
+      .map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`)
+      .join('; ');
+    throw new Error(`Invalid fetchGroupInstances options: ${issues}`);
+  }
+  const { userId, groupId, authCookie, twoFactorAuthCookie } = parsed.data;
 
-  // Cookie ヘッダ組み立て時にセミコロンが混入すると別の Cookie として解釈される。
-  // Secrets の誤設定や仕様変更を早期検知するため、明示的にガードする。
-  if (authCookie.includes(';')) {
-    throw new Error('Cookie value must not contain ";"');
+  const cookieParts = [`auth=${authCookie}`];
+  if (twoFactorAuthCookie) {
+    cookieParts.push(`twoFactorAuth=${twoFactorAuthCookie}`);
   }
 
   // vrchat.com は api.vrchat.cloud へ 307 リダイレクトする。
@@ -116,7 +170,7 @@ export async function fetchGroupInstances(
     headers: {
       'User-Agent': USER_AGENT,
       Accept: 'application/json',
-      Cookie: `auth=${authCookie}`,
+      Cookie: cookieParts.join('; '),
     },
   });
 

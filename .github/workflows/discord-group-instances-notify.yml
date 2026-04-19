@@ -35,3 +35,7 @@ jobs:
           # schedule 実行時は inputs が未定義のため secret にフォールバック
           VRCHAT_GROUP_ID: ${{ inputs.group_id || secrets.VRCHAT_GROUP_ID }}
           VRCHAT_AUTH_COOKIE: ${{ secrets.VRCHAT_AUTH_COOKIE }}
+          # 任意。auth Cookie 単独だと Cookie 取得元と runner の IP が離れる環境で
+          # 401 "Missing Credentials" が返るため、twoFactorAuth JWT (30 日失効) を
+          # 付与することで IP が変わっても認証が通る (src/lib/fetchGroupInstances.ts 参照)
+          VRCHAT_TWOFA_COOKIE: ${{ secrets.VRCHAT_TWOFA_COOKIE }}
