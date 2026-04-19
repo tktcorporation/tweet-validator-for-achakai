@@ -29,4 +29,3 @@ jobs:
           VRCHAT_USER_ID: ${{ secrets.VRCHAT_USER_ID }}
           VRCHAT_GROUP_ID: ${{ secrets.VRCHAT_GROUP_ID }}
           VRCHAT_AUTH_COOKIE: ${{ secrets.VRCHAT_AUTH_COOKIE }}
-          VRCHAT_TWOFA_COOKIE: ${{ secrets.VRCHAT_TWOFA_COOKIE }}

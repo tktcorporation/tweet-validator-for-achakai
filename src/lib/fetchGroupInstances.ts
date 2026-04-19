@@ -36,21 +36,17 @@ export interface GroupInstance {
 }
 
 /**
- * VRChat API のレスポンスから必要フィールドを抽出する。
+ * instances 配列の 1 要素から必要フィールドを抽出する。
  *
- * API は `{ fetchedAt, instance: {...}, world: {...} }` の配列を返す仕様だが、
- * 非公式 API のため一部フィールドが省略される可能性を考慮してオプショナル扱い。
+ * 実 API の各要素はフラット形式: `{ worldId, world: {...}, displayName, name,
+ * userCount, n_users, capacity, region, ... }`。非公式 API のため一部フィールドが
+ * 欠ける可能性を考慮してオプショナル扱いし、worldId が取れない要素は null で除外。
  */
 function extractInstance(raw: unknown): GroupInstance | null {
   if (!raw || typeof raw !== 'object') return null;
-  const entry = raw as Record<string, unknown>;
+  const inst = raw as Record<string, unknown>;
 
-  const inst = (entry.instance as Record<string, unknown> | undefined) ?? entry;
-  if (!inst || typeof inst !== 'object') return null;
-
-  const worldObj =
-    (entry.world as Record<string, unknown> | undefined) ??
-    (inst.world as Record<string, unknown> | undefined);
+  const worldObj = inst.world as Record<string, unknown> | undefined;
 
   const worldId =
     (typeof inst.worldId === 'string' ? inst.worldId : '') ||
@@ -83,40 +79,44 @@ function extractInstance(raw: unknown): GroupInstance | null {
  *
  * - userId / groupId: `usr_...` / `grp_...` 形式の生ID
  * - authCookie: Cookie 値本体のみ（`auth=` プレフィックスは不要。`authcookie_...` の文字列）
- * - twoFactorAuthCookie: Cookie 値本体のみ（`twoFactorAuth=` プレフィックスは不要）
- *   JWT 形式で有効期限 ~30日。期限切れで 401 になったら手動で更新する運用
+ *
+ * 実験により、この endpoint は `auth` Cookie 単独で 200 を返すことを確認済み。
+ * `twoFactorAuth` Cookie は付けても付けなくてもレスポンスが変わらないため、
+ * 運用を単純化するため要求しない（30日失効 JWT の管理を避ける）。
  */
 export interface FetchGroupInstancesOptions {
   userId: string;
   groupId: string;
   authCookie: string;
-  twoFactorAuthCookie: string;
 }
 
 /**
  * VRChat API から指定グループのインスタンス一覧を取得する。
  *
- * auth / twoFactorAuth Cookie は GitHub Secrets から渡す。twoFactorAuth は
- * 有効期限が約 30 日なので、期限切れで 401 になったら手動で更新する運用。
+ * auth Cookie は GitHub Secrets から渡す。
+ * レスポンスは `{ fetchedAt, instances: [...] }` のラッパー形式。
  */
 export async function fetchGroupInstances(
   options: FetchGroupInstancesOptions,
 ): Promise<GroupInstance[]> {
-  const { userId, groupId, authCookie, twoFactorAuthCookie } = options;
+  const { userId, groupId, authCookie } = options;
 
   // Cookie ヘッダ組み立て時にセミコロンが混入すると別の Cookie として解釈される。
   // Secrets の誤設定や仕様変更を早期検知するため、明示的にガードする。
-  if (authCookie.includes(';') || twoFactorAuthCookie.includes(';')) {
+  if (authCookie.includes(';')) {
     throw new Error('Cookie value must not contain ";"');
   }
 
-  const url = `https://vrchat.com/api/1/users/${encodeURIComponent(userId)}/instances/groups/${encodeURIComponent(groupId)}`;
+  // vrchat.com は api.vrchat.cloud へ 307 リダイレクトする。
+  // Node の fetch は cross-origin リダイレクト時に Cookie ヘッダを落とすため、
+  // リダイレクト先を直接叩く（ブラウザ DevTools でも同一ホストとして動く）。
+  const url = `https://api.vrchat.cloud/api/1/users/${encodeURIComponent(userId)}/instances/groups/${encodeURIComponent(groupId)}`;
 
   const res = await fetch(url, {
     headers: {
       'User-Agent': USER_AGENT,
       Accept: 'application/json',
-      Cookie: `auth=${authCookie}; twoFactorAuth=${twoFactorAuthCookie}`,
+      Cookie: `auth=${authCookie}`,
     },
   });
 
@@ -128,13 +128,27 @@ export async function fetchGroupInstances(
   }
 
   const data: unknown = await res.json();
-  if (!Array.isArray(data)) {
-    throw new Error('VRChat API returned non-array response');
+  const instancesArr = extractInstancesArray(data);
+  if (instancesArr === null) {
+    throw new Error('VRChat API returned unexpected response shape');
   }
 
-  return data
+  return instancesArr
     .map(extractInstance)
     .filter((i): i is GroupInstance => i !== null);
+}
+
+/**
+ * 実レスポンスは `{fetchedAt, instances: [...]}` のラッパー形式だが、
+ * VRChat 非公式 API の仕様変更に備えて top-level 配列形式もフォールバック許容する。
+ */
+function extractInstancesArray(data: unknown): unknown[] | null {
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === 'object') {
+    const instances = (data as Record<string, unknown>).instances;
+    if (Array.isArray(instances)) return instances;
+  }
+  return null;
 }
 
 /**

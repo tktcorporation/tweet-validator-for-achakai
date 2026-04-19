@@ -20,27 +20,35 @@ describe('fetchGroupInstances', () => {
     userId: 'usr_abc',
     groupId: 'grp_xyz',
     authCookie: 'authcookie_val',
-    twoFactorAuthCookie: 'twofa_val',
   };
 
-  it('VRChat API を Cookie 付きで叩き、必要フィールドを抽出する', async () => {
+  // 実 API のレスポンス形状を再現した mock helper。
+  // 2026-04 時点で VRChat API が返す top-level は `{fetchedAt, instances: [...]}`
+  // で、各 instance は worldId / world / displayName / name / userCount / capacity
+  // / region / n_users などがフラットに並ぶ。
+  const realResponse = (instances: unknown[]) => ({
+    fetchedAt: '2026-04-19T06:45:00Z',
+    instances,
+  });
+
+  it('VRChat API を auth Cookie 付きで叩き、実レスポンス形式から必要フィールドを抽出する', async () => {
     const mockFetch = vi.mocked(globalThis.fetch);
     mockFetch.mockResolvedValueOnce(
       new Response(
-        JSON.stringify([
-          {
-            fetchedAt: '2026-04-19T06:45:00Z',
-            instance: {
+        JSON.stringify(
+          realResponse([
+            {
               worldId: 'wrld_1',
               displayName: 'Untitled Tea Party',
               name: '51786',
               userCount: 18,
+              n_users: 18,
               capacity: 64,
               region: 'jp',
               world: { id: 'wrld_1', name: 'Ever-changing City v5' },
             },
-          },
-        ]),
+          ]),
+        ),
         { status: 200 },
       ),
     );
@@ -48,10 +56,10 @@ describe('fetchGroupInstances', () => {
     const result = await fetchGroupInstances(baseOptions);
 
     expect(mockFetch).toHaveBeenCalledWith(
-      'https://vrchat.com/api/1/users/usr_abc/instances/groups/grp_xyz',
+      'https://api.vrchat.cloud/api/1/users/usr_abc/instances/groups/grp_xyz',
       expect.objectContaining({
         headers: expect.objectContaining({
-          Cookie: 'auth=authcookie_val; twoFactorAuth=twofa_val',
+          Cookie: 'auth=authcookie_val',
         }),
       }),
     );
@@ -68,35 +76,53 @@ describe('fetchGroupInstances', () => {
     ]);
   });
 
-  it('instance.worldId が無くても entry.world.id からフォールバック取得する', async () => {
+  it('instances が空配列なら空リストを返す', async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(
+      new Response(JSON.stringify(realResponse([])), { status: 200 }),
+    );
+    expect(await fetchGroupInstances(baseOptions)).toEqual([]);
+  });
+
+  it('userCount が無い場合は n_users にフォールバックする', async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify(
+          realResponse([
+            {
+              worldId: 'wrld_x',
+              name: '1',
+              n_users: 7,
+              capacity: 16,
+              region: 'us',
+              world: { id: 'wrld_x', name: 'X' },
+            },
+          ]),
+        ),
+        { status: 200 },
+      ),
+    );
+    const [inst] = await fetchGroupInstances(baseOptions);
+    expect(inst.userCount).toBe(7);
+  });
+
+  it('top-level が配列の古い形式もフォールバックで受け入れる', async () => {
     vi.mocked(globalThis.fetch).mockResolvedValueOnce(
       new Response(
         JSON.stringify([
           {
-            world: { id: 'wrld_from_entry', name: 'From Entry World' },
-            instance: {
-              name: '42',
-              userCount: 3,
-              capacity: 32,
-              region: 'eu',
-            },
+            worldId: 'wrld_legacy',
+            name: '1',
+            userCount: 1,
+            capacity: 16,
+            region: 'jp',
+            world: { id: 'wrld_legacy', name: 'Legacy' },
           },
         ]),
         { status: 200 },
       ),
     );
     const result = await fetchGroupInstances(baseOptions);
-    expect(result).toEqual<GroupInstance[]>([
-      {
-        worldId: 'wrld_from_entry',
-        worldName: 'From Entry World',
-        displayName: '',
-        name: '42',
-        userCount: 3,
-        capacity: 32,
-        region: 'eu',
-      },
-    ]);
+    expect(result[0].worldId).toBe('wrld_legacy');
   });
 
   it('Cookie 値にセミコロンが含まれていたら例外を投げる', async () => {
@@ -110,18 +136,18 @@ describe('fetchGroupInstances', () => {
   it('worldId を持たないエントリは除外する', async () => {
     vi.mocked(globalThis.fetch).mockResolvedValueOnce(
       new Response(
-        JSON.stringify([
-          { instance: { name: '1', userCount: 1 } },
-          {
-            instance: {
+        JSON.stringify(
+          realResponse([
+            { name: '1', userCount: 1 },
+            {
               worldId: 'wrld_ok',
               name: '2',
               userCount: 2,
               capacity: 16,
               world: { id: 'wrld_ok', name: 'OK World' },
             },
-          },
-        ]),
+          ]),
+        ),
         { status: 200 },
       ),
     );
@@ -139,18 +165,20 @@ describe('fetchGroupInstances', () => {
     await expect(fetchGroupInstances(baseOptions)).rejects.toThrow(/401/);
   });
 
-  it('配列以外が返ったら例外を投げる', async () => {
+  it('想定外の形状（配列でも instances キーでもない）は例外を投げる', async () => {
     vi.mocked(globalThis.fetch).mockResolvedValueOnce(
       new Response(JSON.stringify({ error: 'nope' }), { status: 200 }),
     );
 
-    await expect(fetchGroupInstances(baseOptions)).rejects.toThrow(/non-array/);
+    await expect(fetchGroupInstances(baseOptions)).rejects.toThrow(
+      /unexpected response shape/,
+    );
   });
 
   it('ユーザーID・グループIDを URL エンコードする', async () => {
     const mockFetch = vi.mocked(globalThis.fetch);
     mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify([]), { status: 200 }),
+      new Response(JSON.stringify(realResponse([])), { status: 200 }),
     );
 
     await fetchGroupInstances({
@@ -160,7 +188,7 @@ describe('fetchGroupInstances', () => {
     });
 
     expect(mockFetch).toHaveBeenCalledWith(
-      'https://vrchat.com/api/1/users/usr%20a%2Fb/instances/groups/grp%20x',
+      'https://api.vrchat.cloud/api/1/users/usr%20a%2Fb/instances/groups/grp%20x',
       expect.any(Object),
     );
   });

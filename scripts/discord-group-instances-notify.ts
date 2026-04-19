@@ -11,7 +11,6 @@
  *   - VRCHAT_USER_ID       (usr_... 形式。bot アカウントの ID)
  *   - VRCHAT_GROUP_ID      (grp_... 形式)
  *   - VRCHAT_AUTH_COOKIE   (authcookie_... の値のみ)
- *   - VRCHAT_TWOFA_COOKIE  (twoFactorAuth JWT の値のみ、~30日で失効)
  */
 
 import {
@@ -33,14 +32,12 @@ async function main() {
   const userId = requireEnv('VRCHAT_USER_ID');
   const groupId = requireEnv('VRCHAT_GROUP_ID');
   const authCookie = requireEnv('VRCHAT_AUTH_COOKIE');
-  const twoFactorAuthCookie = requireEnv('VRCHAT_TWOFA_COOKIE');
 
   console.log('VRChat グループインスタンス一覧を取得中...');
   const instances = await fetchGroupInstances({
     userId,
     groupId,
     authCookie,
-    twoFactorAuthCookie,
   });
   console.log(`${instances.length} 件のインスタンスを取得`);
 
