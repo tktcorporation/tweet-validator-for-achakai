@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# pnpm artifacts (project uses npm in CI / package-lock.json)
+.pnpm-store/
+pnpm-lock.yaml
+
 # Claude Code worktrees (project rule: parallel work goes here)
 .claude/worktrees/
 # PR self-review counter (per .claude/rules/pr-self-review.md)
