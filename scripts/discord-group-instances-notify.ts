@@ -48,7 +48,13 @@ async function main() {
   const response = await fetch(webhookUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ content: message }),
+    // message は VRChat の world / instance 名 (ユーザー生成) を含むため、
+    // `@everyone` などが混入しても実際のメンションが飛ばないよう
+    // allowed_mentions を空にしてパースを無効化する。
+    body: JSON.stringify({
+      content: message,
+      allowed_mentions: { parse: [] },
+    }),
   });
 
   if (!response.ok) {
