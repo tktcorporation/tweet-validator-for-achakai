@@ -12,10 +12,12 @@ import {
   type VRChatWorldInfo,
 } from '../lib/fetchVRChatWorld';
 
-export const instrumentEmojiArray = '🎸 🎹 🥁 🎺 🎻 🎷 🪕 🪗 🎤 🎧 📯 🪘 🎼'.split(' ');
+export const instrumentEmojiArray =
+  '🎸 🎹 🥁 🎺 🎻 🎷 🪕 🪗 🎤 🎧 📯 🪘 🎼'.split(' ');
 
 export function countTweetLength(text: string): number {
-  const wideChar = /[\u1100-\u115F\u2329\u232A\u2E80-\uA4CF\uAC00-\uD7A3\uF900-\uFAFF\uFE10-\uFE19\uFE30-\uFE6F\uFF00-\uFF60\uFFE0-\uFFE6]/u;
+  const wideChar =
+    /[\u1100-\u115F\u2329\u232A\u2E80-\uA4CF\uAC00-\uD7A3\uF900-\uFAFF\uFE10-\uFE19\uFE30-\uFE6F\uFF00-\uFF60\uFFE0-\uFFE6]/u;
   let count = 0;
   for (const ch of [...text]) {
     count += wideChar.test(ch) ? 2 : 1;
@@ -31,7 +33,9 @@ export interface ParsedFields {
   suffix: string;
 }
 
-export function extractLocation(text: string): { world: string; creator: string } | null {
+export function extractLocation(
+  text: string,
+): { world: string; creator: string } | null {
   const blockMatch = text.match(/【場所】([\s\S]*?)(?=\n【|\s*$)/);
   if (!blockMatch) return null;
   const block = blockMatch[1];
@@ -79,7 +83,7 @@ export function buildStructuredTweet(
   // Replace the entire location block (【場所】 line and any continuation lines
   // before the next 【 section). This prevents duplicates when world names
   // contain newlines (e.g. multiline values from the spreadsheet).
-  const locationIdx = lines.findIndex(line => line.startsWith('【場所】'));
+  const locationIdx = lines.findIndex((line) => line.startsWith('【場所】'));
   if (locationIdx !== -1) {
     let endIdx = locationIdx + 1;
     while (endIdx < lines.length && !lines[endIdx].startsWith('【')) {
@@ -172,7 +176,7 @@ export function validateTweet(
   );
   let expectedMeetingNumber = referenceMeetingNumber + weeksDiff;
   // Count skipped dates between reference date and tweet date
-  const skippedCount = skippedDatesOverride.filter(d => {
+  const skippedCount = skippedDatesOverride.filter((d) => {
     return d > referenceDate && d <= tweetDate;
   }).length;
   expectedMeetingNumber -= skippedCount;
@@ -235,19 +239,31 @@ export function useTweetState() {
   const [charCount, setCharCount] = useState(0);
   const [animateCount, setAnimateCount] = useState(false);
   const [isLoadingSchedule, setIsLoadingSchedule] = useState(false);
-  const [showCopyFeedbackFor, setShowCopyFeedbackFor] = useState<string | null>(null);
-  const [structuredMode, setStructuredMode] = useState(initialData.structuredMode || false);
+  const [showCopyFeedbackFor, setShowCopyFeedbackFor] = useState<string | null>(
+    null,
+  );
+  const [structuredMode, setStructuredMode] = useState(
+    initialData.structuredMode || false,
+  );
   const [freeText, setFreeText] = useState(initialData.freeText || '');
   const [worldName, setWorldName] = useState(initialData.worldName || '');
   const [creatorName, setCreatorName] = useState(initialData.creatorName || '');
-  const [instrumentEmoji, setInstrumentEmoji] = useState(initialData.instrumentEmoji || '🎸');
-  const [suffixEmoji, setSuffixEmoji] = useState(initialData.suffixEmoji || '🏘️');
-  const [structuredTemplate, setStructuredTemplate] = useState<string[]>(initialData.structuredTemplate || []);
+  const [instrumentEmoji, setInstrumentEmoji] = useState(
+    initialData.instrumentEmoji || '🎸',
+  );
+  const [suffixEmoji, setSuffixEmoji] = useState(
+    initialData.suffixEmoji || '🏘️',
+  );
+  const [structuredTemplate, setStructuredTemplate] = useState<string[]>(
+    initialData.structuredTemplate || [],
+  );
   const [sheetSchedule, setSheetSchedule] = useState<ScheduleEntry[]>([]);
-  const [sheetSkippedDates, setSheetSkippedDates] = useState<Date[]>(skippedDates);
+  const [sheetSkippedDates, setSheetSkippedDates] =
+    useState<Date[]>(skippedDates);
   const [isSheetLoading, setIsSheetLoading] = useState(false);
   const [sheetError, setSheetError] = useState<string | null>(null);
-  const [vrchatWorldInfo, setVrchatWorldInfo] = useState<VRChatWorldInfo | null>(null);
+  const [vrchatWorldInfo, setVrchatWorldInfo] =
+    useState<VRChatWorldInfo | null>(null);
   const [isVrchatWorldLoading, setIsVrchatWorldLoading] = useState(false);
 
   const loadSheetSchedule = useCallback(async () => {
@@ -261,7 +277,11 @@ export function useTweetState() {
         setSheetSkippedDates(derived);
       }
     } catch (e) {
-      setSheetError(e instanceof Error ? e.message : 'スプレッドシートの読み込みに失敗しました');
+      setSheetError(
+        e instanceof Error
+          ? e.message
+          : 'スプレッドシートの読み込みに失敗しました',
+      );
     } finally {
       setIsSheetLoading(false);
     }
@@ -291,7 +311,15 @@ export function useTweetState() {
         ),
       );
     }
-  }, [freeText, worldName, creatorName, instrumentEmoji, suffixEmoji, structuredMode, structuredTemplate]);
+  }, [
+    freeText,
+    worldName,
+    creatorName,
+    instrumentEmoji,
+    suffixEmoji,
+    structuredMode,
+    structuredTemplate,
+  ]);
 
   useEffect(() => {
     const data = {
@@ -307,7 +335,16 @@ export function useTweetState() {
     if (typeof window !== 'undefined') {
       localStorage.setItem('tweet-state', JSON.stringify(data));
     }
-  }, [tweetText, structuredMode, freeText, worldName, creatorName, instrumentEmoji, suffixEmoji, structuredTemplate]);
+  }, [
+    tweetText,
+    structuredMode,
+    freeText,
+    worldName,
+    creatorName,
+    instrumentEmoji,
+    suffixEmoji,
+    structuredTemplate,
+  ]);
 
   const referenceDate = new Date('2025-12-21');
   const referenceMeetingNumber = 253;
@@ -337,7 +374,7 @@ export function useTweetState() {
     }
     setIsVrchatWorldLoading(true);
     setVrchatWorldInfo(null);
-    fetchVRChatWorldInfo(worldId).then(info => {
+    fetchVRChatWorldInfo(worldId).then((info) => {
       setVrchatWorldInfo(info);
       setIsVrchatWorldLoading(false);
     });
@@ -350,7 +387,9 @@ export function useTweetState() {
       worldName.trim() !== '' ||
       creatorName.trim() !== ''
     ) {
-      const confirmed = window.confirm('現在の入力内容は上書きされます。続行しますか?');
+      const confirmed = window.confirm(
+        '現在の入力内容は上書きされます。続行しますか?',
+      );
       if (!confirmed) {
         return;
       }
@@ -377,7 +416,7 @@ export function useTweetState() {
             (7 * 24 * 60 * 60 * 1000),
         );
         meetingNumber = referenceMeetingNumber + weeksDiff;
-        const skippedCount = sheetSkippedDates.filter(d => {
+        const skippedCount = sheetSkippedDates.filter((d) => {
           return d > referenceDate && d <= upcomingSunday;
         }).length;
         meetingNumber -= skippedCount;
@@ -409,7 +448,9 @@ export function useTweetState() {
       worldName.trim() !== '' ||
       creatorName.trim() !== ''
     ) {
-      const confirmed = window.confirm('現在の入力内容は上書きされます。続行しますか?');
+      const confirmed = window.confirm(
+        '現在の入力内容は上書きされます。続行しますか?',
+      );
       if (!confirmed) {
         return;
       }
@@ -474,7 +515,9 @@ export function useTweetState() {
   const switchToStructuredMode = () => {
     const parsed = parseStructuredFields(tweetText);
     if (!parsed) {
-      alert('現在のテキストはテンプレートと互換性がないため、構造化編集に戻せません。');
+      alert(
+        '現在のテキストはテンプレートと互換性がないため、構造化編集に戻せません。',
+      );
       return;
     }
     setFreeText(parsed.freeText);
@@ -486,7 +529,13 @@ export function useTweetState() {
     setStructuredMode(true);
   };
 
-  const validation = validateTweet(tweetText, referenceDate, referenceMeetingNumber, new Date(), sheetSkippedDates);
+  const validation = validateTweet(
+    tweetText,
+    referenceDate,
+    referenceMeetingNumber,
+    new Date(),
+    sheetSkippedDates,
+  );
   const tweetLength = countTweetLength(tweetText);
   const maxTweetLength = 280;
 

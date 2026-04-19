@@ -89,7 +89,9 @@ function App() {
           >
             <div className="flex items-center gap-2">
               <Calendar className="w-4 h-4 text-neutral-medium" />
-              <span className="text-sm font-medium text-neutral-dark">スプレッドシート予定</span>
+              <span className="text-sm font-medium text-neutral-dark">
+                スプレッドシート予定
+              </span>
               {isSheetLoading ? (
                 <Loader2 className="w-3 h-3 animate-spin text-neutral-medium" />
               ) : sheetError ? (
@@ -98,7 +100,9 @@ function App() {
                   読み込み失敗
                 </span>
               ) : sheetSchedule.length > 0 ? (
-                <span className="text-xs text-green-600">({sheetSchedule.length}件)</span>
+                <span className="text-xs text-green-600">
+                  ({sheetSchedule.length}件)
+                </span>
               ) : null}
             </div>
             {isScheduleSectionOpen ? (
@@ -131,16 +135,26 @@ function App() {
                   <table className="w-full text-xs">
                     <thead>
                       <tr className="border-b border-neutral-medium/20">
-                        <th className="text-center py-2 px-2 text-neutral-medium font-medium">確定</th>
-                        <th className="text-left py-2 px-2 text-neutral-medium font-medium">日付</th>
-                        <th className="text-left py-2 px-2 text-neutral-medium font-medium">回</th>
-                        <th className="text-left py-2 px-2 text-neutral-medium font-medium">ワールド名</th>
-                        <th className="text-left py-2 px-2 text-neutral-medium font-medium">作者</th>
+                        <th className="text-center py-2 px-2 text-neutral-medium font-medium">
+                          確定
+                        </th>
+                        <th className="text-left py-2 px-2 text-neutral-medium font-medium">
+                          日付
+                        </th>
+                        <th className="text-left py-2 px-2 text-neutral-medium font-medium">
+                          回
+                        </th>
+                        <th className="text-left py-2 px-2 text-neutral-medium font-medium">
+                          ワールド名
+                        </th>
+                        <th className="text-left py-2 px-2 text-neutral-medium font-medium">
+                          作者
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
                       {sheetSchedule
-                        .filter(entry => {
+                        .filter((entry) => {
                           // 過去2週間以降のエントリのみ表示
                           const [y, m, d] = entry.date.split('/').map(Number);
                           const entryDate = new Date(y, m - 1, d);
@@ -181,10 +195,16 @@ function App() {
                                   `第${entry.meetingNumber}回`
                                 )}
                               </td>
-                              <td className="py-1.5 px-2 max-w-[150px] truncate" title={entry.worldName}>
+                              <td
+                                className="py-1.5 px-2 max-w-[150px] truncate"
+                                title={entry.worldName}
+                              >
                                 {entry.worldName || '-'}
                               </td>
-                              <td className="py-1.5 px-2 max-w-[100px] truncate" title={entry.creator}>
+                              <td
+                                className="py-1.5 px-2 max-w-[100px] truncate"
+                                title={entry.creator}
+                              >
                                 {entry.creator || '-'}
                               </td>
                             </tr>
@@ -200,39 +220,48 @@ function App() {
                 </p>
               )}
               {/* 今週のワールド詳細（URL・説明） */}
-              {!isSheetLoading && thisWeekEntry && thisWeekEntry.meetingNumber !== null && thisWeekEntry.worldUrl && (
-                <div className="mt-3 p-3 bg-brand-primary/5 border border-brand-primary/20 rounded-lg">
-                  <p className="text-xs font-semibold text-brand-primary mb-2">今週のワールド詳細</p>
-                  {/* URL リンク */}
-                  <a
-                    href={thisWeekEntry.worldUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 hover:underline mb-2 break-all"
-                  >
-                    <ExternalLink className="w-3 h-3 flex-shrink-0" />
-                    {thisWeekEntry.worldUrl}
-                  </a>
-                  {/* VRChat API から取得した説明（取得中・取得済み・フォールバック） */}
-                  {isVrchatWorldLoading ? (
-                    <div className="flex items-center gap-1.5 text-xs text-neutral-medium">
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                      VRChat からワールド情報を取得中...
-                    </div>
-                  ) : vrchatWorldInfo?.description ? (
-                    <div className="flex items-start gap-1.5 text-xs text-neutral-dark">
-                      <FileText className="w-3 h-3 flex-shrink-0 mt-0.5 text-neutral-medium" />
-                      <p className="whitespace-pre-wrap">{vrchatWorldInfo.description}</p>
-                    </div>
-                  ) : thisWeekEntry.worldDescription ? (
-                    // VRChat API が取得できなかった場合はスプレッドシートの説明を表示
-                    <div className="flex items-start gap-1.5 text-xs text-neutral-dark">
-                      <FileText className="w-3 h-3 flex-shrink-0 mt-0.5 text-neutral-medium" />
-                      <p className="whitespace-pre-wrap">{thisWeekEntry.worldDescription}</p>
-                    </div>
-                  ) : null}
-                </div>
-              )}
+              {!isSheetLoading &&
+                thisWeekEntry &&
+                thisWeekEntry.meetingNumber !== null &&
+                thisWeekEntry.worldUrl && (
+                  <div className="mt-3 p-3 bg-brand-primary/5 border border-brand-primary/20 rounded-lg">
+                    <p className="text-xs font-semibold text-brand-primary mb-2">
+                      今週のワールド詳細
+                    </p>
+                    {/* URL リンク */}
+                    <a
+                      href={thisWeekEntry.worldUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 hover:underline mb-2 break-all"
+                    >
+                      <ExternalLink className="w-3 h-3 flex-shrink-0" />
+                      {thisWeekEntry.worldUrl}
+                    </a>
+                    {/* VRChat API から取得した説明（取得中・取得済み・フォールバック） */}
+                    {isVrchatWorldLoading ? (
+                      <div className="flex items-center gap-1.5 text-xs text-neutral-medium">
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        VRChat からワールド情報を取得中...
+                      </div>
+                    ) : vrchatWorldInfo?.description ? (
+                      <div className="flex items-start gap-1.5 text-xs text-neutral-dark">
+                        <FileText className="w-3 h-3 flex-shrink-0 mt-0.5 text-neutral-medium" />
+                        <p className="whitespace-pre-wrap">
+                          {vrchatWorldInfo.description}
+                        </p>
+                      </div>
+                    ) : thisWeekEntry.worldDescription ? (
+                      // VRChat API が取得できなかった場合はスプレッドシートの説明を表示
+                      <div className="flex items-start gap-1.5 text-xs text-neutral-dark">
+                        <FileText className="w-3 h-3 flex-shrink-0 mt-0.5 text-neutral-medium" />
+                        <p className="whitespace-pre-wrap">
+                          {thisWeekEntry.worldDescription}
+                        </p>
+                      </div>
+                    ) : null}
+                  </div>
+                )}
             </div>
           )}
         </section>
@@ -249,7 +278,8 @@ function App() {
                   前回の開催は終了しました
                 </h2>
                 <p className="text-sm text-amber-700 mb-3">
-                  {validation.extractedInfo.date} の予定が残っています。次の開催予定を作成しましょう。
+                  {validation.extractedInfo.date}{' '}
+                  の予定が残っています。次の開催予定を作成しましょう。
                 </p>
                 <button
                   onClick={generateThisWeeksSchedule}
@@ -277,7 +307,9 @@ function App() {
         <section className="bg-white rounded-xl shadow-lg p-5 sm:p-6 mb-6">
           {/* Section Header with Primary Action */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-            <h2 className="text-lg font-bold text-neutral-dark">ツイート作成</h2>
+            <h2 className="text-lg font-bold text-neutral-dark">
+              ツイート作成
+            </h2>
             {!isScheduleExpired && (
               <div className="flex flex-wrap gap-2">
                 <button
@@ -344,7 +376,10 @@ function App() {
           {structuredMode ? (
             <div className="space-y-4">
               <div>
-                <label htmlFor="freeTextInput" className="block text-sm font-medium text-neutral-dark mb-1.5">
+                <label
+                  htmlFor="freeTextInput"
+                  className="block text-sm font-medium text-neutral-dark mb-1.5"
+                >
                   自由文
                 </label>
                 <textarea
@@ -357,7 +392,10 @@ function App() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label htmlFor="instrumentEmojiInput" className="block text-sm font-medium text-neutral-dark mb-1.5">
+                  <label
+                    htmlFor="instrumentEmojiInput"
+                    className="block text-sm font-medium text-neutral-dark mb-1.5"
+                  >
                     お茶会絵文字
                   </label>
                   <input
@@ -370,7 +408,10 @@ function App() {
                   />
                 </div>
                 <div>
-                  <label htmlFor="suffixEmojiInput" className="block text-sm font-medium text-neutral-dark mb-1.5">
+                  <label
+                    htmlFor="suffixEmojiInput"
+                    className="block text-sm font-medium text-neutral-dark mb-1.5"
+                  >
                     後ろの絵文字
                   </label>
                   <input
@@ -384,7 +425,10 @@ function App() {
                 </div>
               </div>
               <div>
-                <label htmlFor="worldNameInput" className="block text-sm font-medium text-neutral-dark mb-1.5">
+                <label
+                  htmlFor="worldNameInput"
+                  className="block text-sm font-medium text-neutral-dark mb-1.5"
+                >
                   ワールド名
                 </label>
                 <input
@@ -397,7 +441,10 @@ function App() {
                 />
               </div>
               <div>
-                <label htmlFor="creatorNameInput" className="block text-sm font-medium text-neutral-dark mb-1.5">
+                <label
+                  htmlFor="creatorNameInput"
+                  className="block text-sm font-medium text-neutral-dark mb-1.5"
+                >
                   クリエイター名
                 </label>
                 <input
@@ -410,7 +457,10 @@ function App() {
                 />
               </div>
               <div>
-                <label htmlFor="tweetTemplate" className="block text-sm font-medium text-neutral-dark mb-1.5">
+                <label
+                  htmlFor="tweetTemplate"
+                  className="block text-sm font-medium text-neutral-dark mb-1.5"
+                >
                   プレビュー
                 </label>
                 <textarea
@@ -427,7 +477,9 @@ function App() {
               value={tweetText}
               onChange={(e) => setTweetText(e.target.value)}
               className={`w-full h-48 p-3 border rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary bg-white text-neutral-dark text-sm transition-all ${
-                validation.hasPlaceholders ? 'border-red-400' : 'border-neutral-medium/50'
+                validation.hasPlaceholders
+                  ? 'border-red-400'
+                  : 'border-neutral-medium/50'
               }`}
               placeholder="ここにツイートを入力してください..."
             />
@@ -435,12 +487,16 @@ function App() {
 
           {/* Character Count */}
           <div className="flex justify-between items-center mt-3">
-            <span className={`text-sm font-mono ${animateCount ? 'animate-pulse-fade' : ''} text-neutral-medium`}>
+            <span
+              className={`text-sm font-mono ${animateCount ? 'animate-pulse-fade' : ''} text-neutral-medium`}
+            >
               文字数: {charCount}
             </span>
             <span
               className={`text-sm font-mono ${
-                tweetLength > maxTweetLength ? 'text-red-500 font-semibold' : 'text-neutral-medium'
+                tweetLength > maxTweetLength
+                  ? 'text-red-500 font-semibold'
+                  : 'text-neutral-medium'
               }`}
             >
               {tweetLength} / {maxTweetLength}
@@ -485,7 +541,9 @@ function App() {
             onClick={() => setIsEmojiSectionOpen(!isEmojiSectionOpen)}
             className="w-full px-5 py-3 flex items-center justify-between text-left hover:bg-neutral-light/50 transition-colors"
           >
-            <span className="text-sm font-medium text-neutral-dark">絵文字を選択</span>
+            <span className="text-sm font-medium text-neutral-dark">
+              絵文字を選択
+            </span>
             {isEmojiSectionOpen ? (
               <ChevronUp className="w-5 h-5 text-neutral-medium" />
             ) : (
@@ -495,7 +553,9 @@ function App() {
           {isEmojiSectionOpen && (
             <div className="px-5 pb-4 space-y-4">
               <div>
-                <span className="text-xs font-medium text-neutral-medium uppercase tracking-wide">お茶会絵文字</span>
+                <span className="text-xs font-medium text-neutral-medium uppercase tracking-wide">
+                  お茶会絵文字
+                </span>
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {instrumentEmojiArray.map((emoji, index) => (
                     <div key={index} className="relative">
@@ -523,7 +583,9 @@ function App() {
                 </div>
               </div>
               <div>
-                <span className="text-xs font-medium text-neutral-medium uppercase tracking-wide">後ろの絵文字</span>
+                <span className="text-xs font-medium text-neutral-medium uppercase tracking-wide">
+                  後ろの絵文字
+                </span>
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {instrumentEmojiArray.map((emoji, index) => (
                     <div key={index} className="relative">
@@ -564,11 +626,36 @@ function App() {
               </h2>
               <div className="space-y-2">
                 {[
-                  { Icon: Calendar, label: "日曜日の日付", isValid: validation.isSunday, dataTestId: "validation-date" },
-                  { Icon: Clock, label: "時間が含まれている", isValid: validation.hasTime, dataTestId: "validation-time" },
-                  { Icon: MapPin, label: "有効な場所形式", isValid: validation.hasValidLocation, dataTestId: "validation-location" },
-                  { Icon: Hash, label: "#あ茶会 ハッシュタグ", isValid: validation.hasHashtag, dataTestId: "validation-hashtag" },
-                  { Icon: Edit3, label: "プレイスホルダーなし", isValid: !validation.hasPlaceholders, dataTestId: "validation-placeholder" },
+                  {
+                    Icon: Calendar,
+                    label: '日曜日の日付',
+                    isValid: validation.isSunday,
+                    dataTestId: 'validation-date',
+                  },
+                  {
+                    Icon: Clock,
+                    label: '時間が含まれている',
+                    isValid: validation.hasTime,
+                    dataTestId: 'validation-time',
+                  },
+                  {
+                    Icon: MapPin,
+                    label: '有効な場所形式',
+                    isValid: validation.hasValidLocation,
+                    dataTestId: 'validation-location',
+                  },
+                  {
+                    Icon: Hash,
+                    label: '#あ茶会 ハッシュタグ',
+                    isValid: validation.hasHashtag,
+                    dataTestId: 'validation-hashtag',
+                  },
+                  {
+                    Icon: Edit3,
+                    label: 'プレイスホルダーなし',
+                    isValid: !validation.hasPlaceholders,
+                    dataTestId: 'validation-placeholder',
+                  },
                 ].map(({ Icon, label, isValid, dataTestId }) => (
                   <div
                     key={label}
@@ -578,7 +665,9 @@ function App() {
                     }`}
                   >
                     <div className="flex items-center gap-2">
-                      <Icon className={`w-4 h-4 ${isValid ? 'text-green-600' : 'text-red-500'}`} />
+                      <Icon
+                        className={`w-4 h-4 ${isValid ? 'text-green-600' : 'text-red-500'}`}
+                      />
                       <span className="text-neutral-dark text-sm">{label}</span>
                     </div>
                     {isValid ? (
@@ -595,9 +684,15 @@ function App() {
                   }`}
                 >
                   <div className="flex items-center gap-2">
-                    <span className={`w-4 h-4 flex items-center justify-center font-bold text-sm ${
-                      validation.isCorrectMeeting ? 'text-green-600' : 'text-red-500'
-                    }`}>#</span>
+                    <span
+                      className={`w-4 h-4 flex items-center justify-center font-bold text-sm ${
+                        validation.isCorrectMeeting
+                          ? 'text-green-600'
+                          : 'text-red-500'
+                      }`}
+                    >
+                      #
+                    </span>
                     <span className="text-neutral-dark text-sm">開催回数</span>
                   </div>
                   {validation.isCorrectMeeting ? (
@@ -642,17 +737,30 @@ function App() {
                   <span>ツイートは有効です</span>
                 </div>
               </div>
-              <h3 className="text-sm font-semibold text-neutral-dark mb-3 uppercase tracking-wide">抽出された情報</h3>
+              <h3 className="text-sm font-semibold text-neutral-dark mb-3 uppercase tracking-wide">
+                抽出された情報
+              </h3>
               <dl className="space-y-2 text-sm bg-neutral-light/50 rounded-lg p-4">
                 {[
-                  { label: '開催回数', value: validation.extractedInfo.meetingNumber },
+                  {
+                    label: '開催回数',
+                    value: validation.extractedInfo.meetingNumber,
+                  },
                   { label: '日付', value: validation.extractedInfo.date },
                   { label: '時間', value: validation.extractedInfo.time },
-                  { label: 'ワールド', value: validation.extractedInfo.worldName },
-                  { label: 'クリエイター', value: validation.extractedInfo.creator },
+                  {
+                    label: 'ワールド',
+                    value: validation.extractedInfo.worldName,
+                  },
+                  {
+                    label: 'クリエイター',
+                    value: validation.extractedInfo.creator,
+                  },
                 ].map(({ label, value }) => (
                   <div key={label} className="flex gap-3">
-                    <dt className="font-medium text-neutral-medium w-24 flex-shrink-0">{label}</dt>
+                    <dt className="font-medium text-neutral-medium w-24 flex-shrink-0">
+                      {label}
+                    </dt>
                     <dd className="text-neutral-dark">{value || '-'}</dd>
                   </div>
                 ))}
