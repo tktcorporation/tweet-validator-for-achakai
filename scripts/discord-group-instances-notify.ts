@@ -6,11 +6,13 @@
  *   VRChat API は認証必須のため Cookie を GitHub Secrets から渡す。
  *
  * 実行方法: npx tsx scripts/discord-group-instances-notify.ts
- * 環境変数（全て必須）:
- *   - DISCORD_WEBHOOK_URL
- *   - VRCHAT_USER_ID       (usr_... 形式。bot アカウントの ID)
- *   - VRCHAT_GROUP_ID      (grp_... 形式)
- *   - VRCHAT_AUTH_COOKIE   (authcookie_... の値のみ)
+ * 環境変数:
+ *   - DISCORD_WEBHOOK_URL  (必須)
+ *   - VRCHAT_USER_ID       (必須。usr_... 形式、bot アカウントの ID)
+ *   - VRCHAT_GROUP_ID      (必須。grp_... 形式)
+ *   - VRCHAT_AUTH_COOKIE   (必須。authcookie_... の値本体のみ)
+ *   - VRCHAT_TWOFA_COOKIE  (任意。twoFactorAuth Cookie の JWT 値。
+ *     Cookie 取得元と叩く IP が離れる環境では付けないと 401 になる)
  */
 
 import {
@@ -32,12 +34,16 @@ async function main() {
   const userId = requireEnv('VRCHAT_USER_ID');
   const groupId = requireEnv('VRCHAT_GROUP_ID');
   const authCookie = requireEnv('VRCHAT_AUTH_COOKIE');
+  // 未設定 secret は `''` に展開される。fetchGroupInstances のスキーマは
+  // 空文字列を「未指定扱い」として受け入れるため、そのまま渡してよい。
+  const twoFactorAuthCookie = process.env.VRCHAT_TWOFA_COOKIE ?? '';
 
   console.log('VRChat グループインスタンス一覧を取得中...');
   const instances = await fetchGroupInstances({
     userId,
     groupId,
     authCookie,
+    twoFactorAuthCookie,
   });
   console.log(`${instances.length} 件のインスタンスを取得`);
 
