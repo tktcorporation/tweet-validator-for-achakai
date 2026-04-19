@@ -3,8 +3,9 @@
  *
  * 背景: スプレッドシートのURL欄に記録された VRChat ワールドURLから
  * ワールドの説明文・サムネイル等を取得し、画面に表示する。
- * VRChat API は認証が必要なため、ブラウザから直接アクセスできない場合がある。
- * その際は null を返してフォールバック表示に任せる。
+ * ブラウザから VRChat API を直接叩くと CORS と UA 要件で失敗するため、
+ * 同一オリジンの Netlify Function (netlify/functions/vrchat-world.ts) 経由で呼ぶ。
+ * 取得に失敗した場合は null を返し、呼び出し元はシート記載の説明にフォールバックする。
  */
 
 export interface VRChatWorldInfo {
@@ -32,9 +33,9 @@ export function extractVRChatWorldId(url: string): string | null {
 /**
  * VRChat API からワールド情報を取得する。
  *
- * VRChat API (api.vrchat.cloud) は認証Cookie が必要。
- * credentials: 'include' で VRChat ウェブのセッションを利用できる場合がある。
- * CORS またはセッション未ログイン時は null を返す（呼び出し元が適切に処理すること）。
+ * 実体のリクエストは同一オリジンの Netlify Function が行う
+ * （直接叩くと CORS/UA 要件で失敗するため。詳細は netlify/functions/vrchat-world.ts）。
+ * プロキシが 4xx/5xx を返すか、ローカル dev 等で Function が存在しない場合は null を返す。
  *
  * 呼び出し元: src/hooks/useTweetState.ts (thisWeekEntry.worldUrl 変化時)
  */
@@ -43,12 +44,8 @@ export async function fetchVRChatWorldInfo(
 ): Promise<VRChatWorldInfo | null> {
   try {
     const res = await fetch(
-      `https://api.vrchat.cloud/api/1/worlds/${worldId}`,
-      {
-        // VRChat ウェブでログイン済みであれば Cookie が送信される
-        credentials: 'include',
-        headers: { Accept: 'application/json' },
-      },
+      `/.netlify/functions/vrchat-world?id=${encodeURIComponent(worldId)}`,
+      { headers: { Accept: 'application/json' } },
     );
     if (!res.ok) return null;
     const data = await res.json();
@@ -59,7 +56,7 @@ export async function fetchVRChatWorldInfo(
       authorName: data.authorName ?? '',
     };
   } catch {
-    // CORS エラー・ネットワークエラー等はすべて null で返す
+    // Function 未デプロイ/ネットワーク障害等はすべて null で返し、シート値へフォールバック
     return null;
   }
 }

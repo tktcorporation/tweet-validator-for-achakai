@@ -12,6 +12,11 @@ dist
 dist-ssr
 *.local
 
+# Claude Code worktrees (project rule: parallel work goes here)
+.claude/worktrees/
+# PR self-review counter (per .claude/rules/pr-self-review.md)
+.claude/.pr-review-count
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
