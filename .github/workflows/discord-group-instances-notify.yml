@@ -5,6 +5,11 @@ on:
     # 毎週日曜 15:45 JST (= 06:45 UTC)
     - cron: '45 6 * * 0'
   workflow_dispatch:
+    inputs:
+      group_id:
+        description: '上書きする VRChat Group ID (例: grp_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)。空なら secret VRCHAT_GROUP_ID を使用'
+        required: false
+        type: string
 
 jobs:
   notify:
@@ -27,5 +32,6 @@ jobs:
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           VRCHAT_USER_ID: ${{ secrets.VRCHAT_USER_ID }}
-          VRCHAT_GROUP_ID: ${{ secrets.VRCHAT_GROUP_ID }}
+          # schedule 実行時は inputs が未定義のため secret にフォールバック
+          VRCHAT_GROUP_ID: ${{ inputs.group_id || secrets.VRCHAT_GROUP_ID }}
           VRCHAT_AUTH_COOKIE: ${{ secrets.VRCHAT_AUTH_COOKIE }}
