@@ -31,6 +31,10 @@ export interface ParsedFields {
   creator: string;
   instrument: string;
   suffix: string;
+  /** 末尾に付与されていたワールドURL。なければ空文字。 */
+  worldUrl: string;
+  /** 末尾のワールドURL行を取り除いた本文。structuredTemplate の再構築に使う。 */
+  textWithoutUrl: string;
 }
 
 export function extractLocation(
@@ -47,14 +51,39 @@ export function extractLocation(
   };
 }
 
+/** 本文の最終行が URL のみの場合、それを分離して返す。なければ null。 */
+export function extractTrailingWorldUrl(
+  text: string,
+): { url: string; textWithoutUrl: string } | null {
+  const lines = text.split('\n');
+  let lastIdx = lines.length - 1;
+  while (lastIdx >= 0 && lines[lastIdx].trim() === '') lastIdx--;
+  if (lastIdx < 0) return null;
+  const lastLine = lines[lastIdx].trim();
+  if (!/^https?:\/\/\S+$/.test(lastLine)) return null;
+
+  const remaining = lines.slice(0, lastIdx);
+  while (
+    remaining.length > 0 &&
+    remaining[remaining.length - 1].trim() === ''
+  ) {
+    remaining.pop();
+  }
+  return { url: lastLine, textWithoutUrl: remaining.join('\n') };
+}
+
 export function parseStructuredFields(text: string): ParsedFields | null {
-  const freeMatch = text.match(/^[\s\S]*?(?=#あ茶会)/);
+  const trailing = extractTrailingWorldUrl(text);
+  const worldUrl = trailing?.url ?? '';
+  const body = trailing?.textWithoutUrl ?? text;
+
+  const freeMatch = body.match(/^[\s\S]*?(?=#あ茶会)/);
   const free = freeMatch ? freeMatch[0].trim() : '';
-  const location = extractLocation(text);
+  const location = extractLocation(body);
   if (!location) {
     return null;
   }
-  const meetingEmojiMatch = text.match(
+  const meetingEmojiMatch = body.match(
     /第\d+回\s*(.*?)題名のないお茶会([^\n]*)/,
   );
   const instrument = meetingEmojiMatch ? meetingEmojiMatch[1].trim() : '🎸';
@@ -65,6 +94,8 @@ export function parseStructuredFields(text: string): ParsedFields | null {
     creator: location.creator === 'クリエイター名' ? '' : location.creator,
     instrument,
     suffix,
+    worldUrl,
+    textWithoutUrl: body,
   };
 }
 
@@ -75,6 +106,8 @@ export function buildStructuredTweet(
   creator: string,
   emoji: string,
   suffix: string,
+  worldUrl = '',
+  includeWorldUrl = false,
 ): string {
   if (!template.length) return '';
   const lines = [...template];
@@ -93,7 +126,7 @@ export function buildStructuredTweet(
     lines.splice(locationIdx, endIdx - locationIdx, ...locationLines);
   }
 
-  return lines
+  const body = lines
     .map((line) => {
       if (line.includes('題名のないお茶会')) {
         return line.replace(
@@ -104,6 +137,11 @@ export function buildStructuredTweet(
       return line;
     })
     .join('\n');
+
+  if (includeWorldUrl && worldUrl.trim() !== '') {
+    return `${body}\n\n${worldUrl.trim()}`;
+  }
+  return body;
 }
 
 // Dates when the event is skipped (holidays)
@@ -203,6 +241,8 @@ export function useTweetState() {
     instrumentEmoji: string;
     suffixEmoji: string;
     structuredTemplate: string[];
+    worldUrl: string;
+    includeWorldUrl: boolean;
   }> = {};
   if (typeof window !== 'undefined') {
     const stored = localStorage.getItem('tweet-state');
@@ -236,6 +276,10 @@ export function useTweetState() {
   );
   const [structuredTemplate, setStructuredTemplate] = useState<string[]>(
     initialData.structuredTemplate || [],
+  );
+  const [worldUrl, setWorldUrl] = useState(initialData.worldUrl || '');
+  const [includeWorldUrl, setIncludeWorldUrl] = useState(
+    initialData.includeWorldUrl || false,
   );
   const [sheetSchedule, setSheetSchedule] = useState<ScheduleEntry[]>([]);
   const [sheetSkippedDates, setSheetSkippedDates] =
@@ -288,6 +332,8 @@ export function useTweetState() {
           creatorName,
           instrumentEmoji,
           suffixEmoji,
+          worldUrl,
+          includeWorldUrl,
         ),
       );
     }
@@ -299,6 +345,8 @@ export function useTweetState() {
     suffixEmoji,
     structuredMode,
     structuredTemplate,
+    worldUrl,
+    includeWorldUrl,
   ]);
 
   useEffect(() => {
@@ -311,6 +359,8 @@ export function useTweetState() {
       instrumentEmoji,
       suffixEmoji,
       structuredTemplate,
+      worldUrl,
+      includeWorldUrl,
     };
     if (typeof window !== 'undefined') {
       localStorage.setItem('tweet-state', JSON.stringify(data));
@@ -324,6 +374,8 @@ export function useTweetState() {
     instrumentEmoji,
     suffixEmoji,
     structuredTemplate,
+    worldUrl,
+    includeWorldUrl,
   ]);
 
   const referenceDate = new Date('2025-12-21');
@@ -404,6 +456,7 @@ export function useTweetState() {
 
       const sheetWorld = sheetEntry?.worldName || '';
       const sheetCreator = sheetEntry?.creator || '';
+      const sheetWorldUrl = sheetEntry?.worldUrl || '';
 
       const template =
         `自由文 #あ茶会\n\n` +
@@ -416,6 +469,7 @@ export function useTweetState() {
       setFreeText('');
       setWorldName(sheetWorld);
       setCreatorName(sheetCreator);
+      setWorldUrl(sheetWorldUrl);
       setStructuredMode(true);
       setIsLoadingSchedule(false);
     }, 300);
@@ -489,6 +543,8 @@ export function useTweetState() {
     setInstrumentEmoji('🎸');
     setSuffixEmoji('🏘️');
     setStructuredTemplate([]);
+    setWorldUrl('');
+    setIncludeWorldUrl(false);
     setStructuredMode(false);
   };
 
@@ -505,7 +561,9 @@ export function useTweetState() {
     setCreatorName(parsed.creator);
     setInstrumentEmoji(parsed.instrument);
     setSuffixEmoji(parsed.suffix);
-    setStructuredTemplate(tweetText.split('\n'));
+    setWorldUrl(parsed.worldUrl);
+    setIncludeWorldUrl(parsed.worldUrl !== '');
+    setStructuredTemplate(parsed.textWithoutUrl.split('\n'));
     setStructuredMode(true);
   };
 
@@ -538,6 +596,10 @@ export function useTweetState() {
     suffixEmoji,
     setSuffixEmoji,
     structuredTemplate,
+    worldUrl,
+    setWorldUrl,
+    includeWorldUrl,
+    setIncludeWorldUrl,
     generateThisWeeksSchedule,
     generateScheduleAnnouncementTweet,
     handleEmojiCopy,

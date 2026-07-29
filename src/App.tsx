@@ -41,6 +41,10 @@ function App() {
     setInstrumentEmoji,
     suffixEmoji,
     setSuffixEmoji,
+    worldUrl,
+    setWorldUrl,
+    includeWorldUrl,
+    setIncludeWorldUrl,
     generateThisWeeksSchedule,
     generateScheduleAnnouncementTweet,
     handleEmojiCopy,
@@ -455,6 +459,27 @@ function App() {
                   className="w-full p-3 border border-neutral-medium/50 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
                   placeholder="ワールド作成者の名前"
                 />
+              </div>
+              <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-neutral-dark mb-1.5">
+                  <input
+                    type="checkbox"
+                    checked={includeWorldUrl}
+                    onChange={(e) => setIncludeWorldUrl(e.target.checked)}
+                    className="w-4 h-4 rounded border-neutral-medium/50 text-brand-primary focus:ring-2 focus:ring-brand-primary"
+                  />
+                  ワールドURLを末尾に追加
+                </label>
+                {includeWorldUrl && (
+                  <input
+                    id="worldUrlInput"
+                    type="text"
+                    value={worldUrl}
+                    onChange={(e) => setWorldUrl(e.target.value)}
+                    className="w-full p-3 border border-neutral-medium/50 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                    placeholder="https://vrchat.com/home/world/wrld_..."
+                  />
+                )}
               </div>
               <div>
                 <label

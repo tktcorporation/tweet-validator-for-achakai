@@ -3,6 +3,7 @@ import {
   parseStructuredFields,
   buildStructuredTweet,
   extractLocation,
+  extractTrailingWorldUrl,
   validateTweet,
 } from './useTweetState';
 
@@ -32,6 +33,20 @@ describe('parseStructuredFields', () => {
     const multi = template.join('\n').replace('自由文', 'line1\nline2');
     const result = parseStructuredFields(multi);
     expect(result?.freeText).toBe('line1\nline2');
+  });
+
+  it('extracts a trailing world URL and strips it from textWithoutUrl', () => {
+    const url = 'https://vrchat.com/home/world/wrld_1234';
+    const text = `${template.join('\n')}\n\n${url}`;
+    const result = parseStructuredFields(text);
+    expect(result?.worldUrl).toBe(url);
+    expect(result?.textWithoutUrl).toBe(template.join('\n'));
+  });
+
+  it('leaves worldUrl empty when there is no trailing URL', () => {
+    const result = parseStructuredFields(template.join('\n'));
+    expect(result?.worldUrl).toBe('');
+    expect(result?.textWithoutUrl).toBe(template.join('\n'));
   });
 });
 
@@ -90,6 +105,67 @@ describe('buildStructuredTweet', () => {
       `【場所】DOBUITA ＆ MIKASA WORLD\n（メタバースヨコスカ） By MetasukaVR`,
     );
     expect(result).toContain('【参加方法】');
+  });
+
+  it('appends the world URL as the last line when includeWorldUrl is true', () => {
+    const result = buildStructuredTweet(
+      template,
+      'test',
+      'World',
+      'Creator',
+      '🎹',
+      '🎪',
+      'https://vrchat.com/home/world/wrld_1234',
+      true,
+    );
+    expect(result.endsWith('https://vrchat.com/home/world/wrld_1234')).toBe(
+      true,
+    );
+  });
+
+  it('omits the world URL when includeWorldUrl is false', () => {
+    const result = buildStructuredTweet(
+      template,
+      'test',
+      'World',
+      'Creator',
+      '🎹',
+      '🎪',
+      'https://vrchat.com/home/world/wrld_1234',
+      false,
+    );
+    expect(result).not.toContain('https://vrchat.com/home/world/wrld_1234');
+  });
+
+  it('omits the world URL when worldUrl is empty even if includeWorldUrl is true', () => {
+    const result = buildStructuredTweet(
+      template,
+      'test',
+      'World',
+      'Creator',
+      '🎹',
+      '🎪',
+      '',
+      true,
+    );
+    expect(result).not.toMatch(/https?:\/\//);
+  });
+});
+
+describe('extractTrailingWorldUrl', () => {
+  it('extracts a URL on the last line', () => {
+    const text = '本文\n\nhttps://vrchat.com/home/world/wrld_1234';
+    const result = extractTrailingWorldUrl(text);
+    expect(result?.url).toBe('https://vrchat.com/home/world/wrld_1234');
+    expect(result?.textWithoutUrl).toBe('本文');
+  });
+
+  it('returns null when the last line is not a URL', () => {
+    expect(extractTrailingWorldUrl('本文\n\nただの文章')).toBeNull();
+  });
+
+  it('returns null for empty text', () => {
+    expect(extractTrailingWorldUrl('')).toBeNull();
   });
 });
 
