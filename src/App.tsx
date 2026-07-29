@@ -474,6 +474,7 @@ function App() {
                   <input
                     id="worldUrlInput"
                     type="text"
+                    aria-label="ワールドURL"
                     value={worldUrl}
                     onChange={(e) => setWorldUrl(e.target.value)}
                     className="w-full p-3 border border-neutral-medium/50 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
