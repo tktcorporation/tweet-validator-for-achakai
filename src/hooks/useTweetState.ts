@@ -116,13 +116,7 @@ export const skippedDates = [
   new Date('2026-04-26'), // リアルあ茶会の日
 ];
 
-export function validateTweet(
-  text: string,
-  referenceDate = new Date('2025-12-21'),
-  referenceMeetingNumber = 253,
-  currentDate: Date = new Date(),
-  skippedDatesOverride: Date[] = skippedDates,
-) {
+export function validateTweet(text: string, currentDate: Date = new Date()) {
   const meetingRegex = /第(\d+)回/;
   const meetingMatch = text.match(meetingRegex);
   const dateRegex = /(\d+)月(\d+)日\(日\)/;
@@ -143,7 +137,6 @@ export function validateTweet(
       isSunday: false,
       hasHashtag,
       meetingNumber: null,
-      isCorrectMeeting: false,
       hasTime: false,
       hasValidLocation: false,
       hasPlaceholders,
@@ -171,17 +164,7 @@ export function validateTweet(
   }
   const tweetDate = new Date(tweetYear, month - 1, day);
   const isSunday = tweetDate.getDay() === 0;
-  const weeksDiff = Math.round(
-    (tweetDate.getTime() - referenceDate.getTime()) / (7 * 24 * 60 * 60 * 1000),
-  );
-  let expectedMeetingNumber = referenceMeetingNumber + weeksDiff;
-  // Count skipped dates between reference date and tweet date
-  const skippedCount = skippedDatesOverride.filter((d) => {
-    return d > referenceDate && d <= tweetDate;
-  }).length;
-  expectedMeetingNumber -= skippedCount;
   const meetingNumber = meetingMatch ? parseInt(meetingMatch[1]) : null;
-  const isCorrectMeeting = meetingNumber === expectedMeetingNumber;
   const time = timeMatch
     ? `${timeMatch[1]}:${timeMatch[2]}〜${timeMatch[3]}:${timeMatch[4]}`
     : null;
@@ -189,7 +172,6 @@ export function validateTweet(
     isValid:
       isSunday &&
       hasHashtag &&
-      isCorrectMeeting &&
       timeMatch !== null &&
       hasValidLocation &&
       !hasPlaceholders,
@@ -197,8 +179,6 @@ export function validateTweet(
     isSunday,
     hasHashtag,
     meetingNumber,
-    expectedMeetingNumber,
-    isCorrectMeeting,
     hasTime: timeMatch !== null,
     hasValidLocation,
     hasPlaceholders,
@@ -529,13 +509,7 @@ export function useTweetState() {
     setStructuredMode(true);
   };
 
-  const validation = validateTweet(
-    tweetText,
-    referenceDate,
-    referenceMeetingNumber,
-    new Date(),
-    sheetSkippedDates,
-  );
+  const validation = validateTweet(tweetText, new Date());
   const tweetLength = countTweetLength(tweetText);
   const maxTweetLength = 280;
 
