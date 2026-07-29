@@ -41,6 +41,10 @@ function App() {
     setInstrumentEmoji,
     suffixEmoji,
     setSuffixEmoji,
+    worldUrl,
+    setWorldUrl,
+    includeWorldUrl,
+    setIncludeWorldUrl,
     generateThisWeeksSchedule,
     generateScheduleAnnouncementTweet,
     handleEmojiCopy,
@@ -457,6 +461,28 @@ function App() {
                 />
               </div>
               <div>
+                <label className="flex items-center gap-2 text-sm font-medium text-neutral-dark mb-1.5">
+                  <input
+                    type="checkbox"
+                    checked={includeWorldUrl}
+                    onChange={(e) => setIncludeWorldUrl(e.target.checked)}
+                    className="w-4 h-4 rounded border-neutral-medium/50 text-brand-primary focus:ring-2 focus:ring-brand-primary"
+                  />
+                  ワールドURLを末尾に追加
+                </label>
+                {includeWorldUrl && (
+                  <input
+                    id="worldUrlInput"
+                    type="text"
+                    aria-label="ワールドURL"
+                    value={worldUrl}
+                    onChange={(e) => setWorldUrl(e.target.value)}
+                    className="w-full p-3 border border-neutral-medium/50 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary"
+                    placeholder="https://vrchat.com/home/world/wrld_..."
+                  />
+                )}
+              </div>
+              <div>
                 <label
                   htmlFor="tweetTemplate"
                   className="block text-sm font-medium text-neutral-dark mb-1.5"
@@ -677,34 +703,6 @@ function App() {
                     )}
                   </div>
                 ))}
-                <div
-                  data-testid="validation-meeting-number"
-                  className={`flex items-center justify-between py-2.5 px-3 rounded-lg ${
-                    validation.isCorrectMeeting ? 'bg-green-50' : 'bg-red-50'
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`w-4 h-4 flex items-center justify-center font-bold text-sm ${
-                        validation.isCorrectMeeting
-                          ? 'text-green-600'
-                          : 'text-red-500'
-                      }`}
-                    >
-                      #
-                    </span>
-                    <span className="text-neutral-dark text-sm">開催回数</span>
-                  </div>
-                  {validation.isCorrectMeeting ? (
-                    <CheckCircle className="w-5 h-5 text-green-500" />
-                  ) : (
-                    <span className="text-xs text-red-500 font-medium">
-                      {validation.meetingNumber !== null
-                        ? `第${validation.expectedMeetingNumber}回であるべき`
-                        : '欠落'}
-                    </span>
-                  )}
-                </div>
               </div>
               {validation.hasNightWord && (
                 <div className="mt-4 p-3 rounded-lg flex items-center bg-yellow-50 border border-yellow-200">
