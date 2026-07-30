@@ -31,7 +31,13 @@ async function main() {
   const response = await fetch(webhookUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ content: message }),
+    // message はスプレッドシートのワールド名等（ユーザー生成）を含むため、
+    // `@everyone` などが混入しても実際のメンションが飛ばないよう
+    // allowed_mentions を空にしてパースを無効化する。
+    body: JSON.stringify({
+      content: message,
+      allowed_mentions: { parse: [] },
+    }),
   });
 
   if (!response.ok) {
@@ -43,4 +49,7 @@ async function main() {
   console.log('Discord に通知を送信しました');
 }
 
-main();
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

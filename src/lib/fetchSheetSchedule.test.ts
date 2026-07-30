@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   parseCSV,
   parseScheduleCSV,
@@ -7,6 +7,7 @@ import {
   deriveSkippedDates,
   generateScheduleAnnouncement,
   generateDiscordWeeklyMessage,
+  fetchScheduleFromSheet,
 } from './fetchSheetSchedule';
 
 describe('parseCSV', () => {
@@ -487,5 +488,49 @@ describe('generateDiscordWeeklyMessage', () => {
     ];
     const msg = generateDiscordWeeklyMessage(entries, new Date(2026, 2, 25));
     expect(msg).toContain('3/29');
+  });
+});
+
+describe('fetchScheduleFromSheet', () => {
+  const originalFetch = globalThis.fetch;
+
+  beforeEach(() => {
+    globalThis.fetch = vi.fn();
+  });
+
+  afterEach(() => {
+    globalThis.fetch = originalFetch;
+  });
+
+  it('ヘッダー行が見つからないレスポンスは例外を投げる', async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(
+      new Response('<html>permission denied</html>', { status: 200 }),
+    );
+    await expect(fetchScheduleFromSheet()).rejects.toThrow(
+      'スプレッドシートの形式が想定と異なります',
+    );
+  });
+
+  it('ヘッダー行があれば正常にパースする', async () => {
+    const csv = [
+      '"開催予定日","2026/02/01"',
+      '"開催回数","256"',
+      '"ワールド名","TestWorld"',
+    ].join('\n');
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(
+      new Response(csv, { status: 200 }),
+    );
+    const entries = await fetchScheduleFromSheet();
+    expect(entries).toHaveLength(1);
+    expect(entries[0].worldName).toBe('TestWorld');
+  });
+
+  it('非 2xx レスポンスは例外を投げる', async () => {
+    vi.mocked(globalThis.fetch).mockResolvedValueOnce(
+      new Response('', { status: 500 }),
+    );
+    await expect(fetchScheduleFromSheet()).rejects.toThrow(
+      'Failed to fetch schedule: 500',
+    );
   });
 });

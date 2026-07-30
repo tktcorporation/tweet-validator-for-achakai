@@ -4,6 +4,7 @@ import {
   findEntryByDate,
   deriveSkippedDates,
   generateScheduleAnnouncement,
+  getUpcomingSunday,
   type ScheduleEntry,
 } from '../lib/fetchSheetSchedule';
 import {
@@ -11,6 +12,18 @@ import {
   fetchVRChatWorldInfo,
   type VRChatWorldInfo,
 } from '../lib/fetchVRChatWorld';
+import {
+  DEFAULT_EVENT_TIME,
+  DEFAULT_INSTRUMENT_EMOJI,
+  DEFAULT_SUFFIX_EMOJI,
+  EVENT_TITLE,
+  HASHTAG,
+  PLACEHOLDER_CREATOR_NAME,
+  PLACEHOLDER_FREE_TEXT,
+  PLACEHOLDER_WORLD_NAME,
+} from '../lib/tweetTemplate';
+
+const STORAGE_KEY = 'tweet-state';
 
 export const instrumentEmojiArray =
   '🎸 🎹 🥁 🎺 🎻 🎷 🪕 🪗 🎤 🎧 📯 🪘 🎼'.split(' ');
@@ -77,21 +90,26 @@ export function parseStructuredFields(text: string): ParsedFields | null {
   const worldUrl = trailing?.url ?? '';
   const body = trailing?.textWithoutUrl ?? text;
 
-  const freeMatch = body.match(/^[\s\S]*?(?=#あ茶会)/);
+  const freeMatch = body.match(new RegExp(`^[\\s\\S]*?(?=${HASHTAG})`));
   const free = freeMatch ? freeMatch[0].trim() : '';
   const location = extractLocation(body);
   if (!location) {
     return null;
   }
   const meetingEmojiMatch = body.match(
-    /第\d+回\s*(.*?)題名のないお茶会([^\n]*)/,
+    new RegExp(`第\\d+回\\s*(.*?)${EVENT_TITLE}([^\\n]*)`),
   );
-  const instrument = meetingEmojiMatch ? meetingEmojiMatch[1].trim() : '🎸';
-  const suffix = meetingEmojiMatch ? meetingEmojiMatch[2].trim() : '🏘️';
+  const instrument = meetingEmojiMatch
+    ? meetingEmojiMatch[1].trim()
+    : DEFAULT_INSTRUMENT_EMOJI;
+  const suffix = meetingEmojiMatch
+    ? meetingEmojiMatch[2].trim()
+    : DEFAULT_SUFFIX_EMOJI;
   return {
-    freeText: free === '自由文' ? '' : free,
-    world: location.world === 'ワールド名' ? '' : location.world,
-    creator: location.creator === 'クリエイター名' ? '' : location.creator,
+    freeText: free === PLACEHOLDER_FREE_TEXT ? '' : free,
+    world: location.world === PLACEHOLDER_WORLD_NAME ? '' : location.world,
+    creator:
+      location.creator === PLACEHOLDER_CREATOR_NAME ? '' : location.creator,
     instrument,
     suffix,
     worldUrl,
@@ -111,7 +129,7 @@ export function buildStructuredTweet(
 ): string {
   if (!template.length) return '';
   const lines = [...template];
-  lines[0] = `${free} #あ茶会`;
+  lines[0] = `${free} ${HASHTAG}`;
 
   // Replace the entire location block (【場所】 line and any continuation lines
   // before the next 【 section). This prevents duplicates when world names
@@ -128,9 +146,9 @@ export function buildStructuredTweet(
 
   const body = lines
     .map((line) => {
-      if (line.includes('題名のないお茶会')) {
+      if (line.includes(EVENT_TITLE)) {
         return line.replace(
-          /(第\d+回 )(.+?)(題名のないお茶会)([^\n]*)/,
+          new RegExp(`(第\\d+回 )(.+?)(${EVENT_TITLE})([^\\n]*)`),
           `$1${emoji}$3${suffix}`,
         );
       }
@@ -145,13 +163,16 @@ export function buildStructuredTweet(
 }
 
 // Dates when the event is skipped (holidays)
+// ISO文字列 new Date('YYYY-MM-DD') はUTC 0時としてパースされ、JSTでは9時になる。
+// getUpcomingSunday 等のローカル0時基準の値と比較する際にズレるため、
+// ローカル日付として明示的に構築する。
 export const skippedDates = [
-  new Date('2025-12-28'),
-  new Date('2026-01-04'),
-  new Date('2026-01-25'),
-  new Date('2026-02-22'),
-  new Date('2026-03-08'),
-  new Date('2026-04-26'), // リアルあ茶会の日
+  new Date(2025, 11, 28),
+  new Date(2026, 0, 4),
+  new Date(2026, 0, 25),
+  new Date(2026, 1, 22),
+  new Date(2026, 2, 8),
+  new Date(2026, 3, 26), // リアルあ茶会の日
 ];
 
 export function validateTweet(text: string, currentDate: Date = new Date()) {
@@ -161,35 +182,42 @@ export function validateTweet(text: string, currentDate: Date = new Date()) {
   const dateMatch = text.match(dateRegex);
   const timeRegex = /(\d{1,2}):(\d{2})〜(\d{1,2}):(\d{2})/;
   const timeMatch = text.match(timeRegex);
-  const hasHashtag = text.includes('#あ茶会');
+  const hasHashtag = text.includes(HASHTAG);
   const location = extractLocation(text);
   const hasValidLocation = location !== null;
-  const placeholdersRegex = /(ワールド名|クリエイター名|自由文)/;
+  const placeholdersRegex = new RegExp(
+    `(${PLACEHOLDER_WORLD_NAME}|${PLACEHOLDER_CREATOR_NAME}|${PLACEHOLDER_FREE_TEXT})`,
+  );
   const hasPlaceholders = placeholdersRegex.test(text);
   const nightWordRegex = /(夜|宵|今宵|今夜)/;
   const hasNightWord = nightWordRegex.test(text);
+  const meetingNumber = meetingMatch ? parseInt(meetingMatch[1], 10) : null;
+  const time = timeMatch
+    ? `${timeMatch[1]}:${timeMatch[2]}〜${timeMatch[3]}:${timeMatch[4]}`
+    : null;
+
   if (!dateMatch) {
     return {
       isValid: false,
       date: null,
       isSunday: false,
       hasHashtag,
-      meetingNumber: null,
-      hasTime: false,
-      hasValidLocation: false,
+      meetingNumber,
+      hasTime: timeMatch !== null,
+      hasValidLocation,
       hasPlaceholders,
       hasNightWord,
       extractedInfo: {
         date: null,
-        time: null,
-        worldName: null,
-        creator: null,
-        meetingNumber: null,
+        time,
+        worldName: location ? location.world : null,
+        creator: location ? location.creator : null,
+        meetingNumber: meetingNumber ? `第${meetingNumber}回` : null,
       },
     };
   }
-  const month = parseInt(dateMatch[1]);
-  const day = parseInt(dateMatch[2]);
+  const month = parseInt(dateMatch[1], 10);
+  const day = parseInt(dateMatch[2], 10);
   // Determine year dynamically: if the date has passed this year, assume next year
   const now = currentDate;
   const currentYear = now.getFullYear();
@@ -201,11 +229,11 @@ export function validateTweet(text: string, currentDate: Date = new Date()) {
     tweetYear = currentYear + 1;
   }
   const tweetDate = new Date(tweetYear, month - 1, day);
-  const isSunday = tweetDate.getDay() === 0;
-  const meetingNumber = meetingMatch ? parseInt(meetingMatch[1]) : null;
-  const time = timeMatch
-    ? `${timeMatch[1]}:${timeMatch[2]}〜${timeMatch[3]}:${timeMatch[4]}`
-    : null;
+  // 「4月31日」等の存在しない日付は Date コンストラクタが翌月へ繰り上げてしまうため、
+  // 繰り上げが起きていないか（= 入力どおりの月/日になっているか）を検証する。
+  const isRealCalendarDate =
+    tweetDate.getMonth() === month - 1 && tweetDate.getDate() === day;
+  const isSunday = isRealCalendarDate && tweetDate.getDay() === 0;
   return {
     isValid:
       isSunday &&
@@ -222,13 +250,29 @@ export function validateTweet(text: string, currentDate: Date = new Date()) {
     hasPlaceholders,
     hasNightWord,
     extractedInfo: {
-      date: dateMatch ? `${month}月${day}日(日)` : null,
+      date: `${month}月${day}日(日)`,
       time,
       worldName: location ? location.world : null,
       creator: location ? location.creator : null,
       meetingNumber: meetingNumber ? `第${meetingNumber}回` : null,
     },
   };
+}
+
+/** 戻り値 true は「続行してよい」（内容が空、またはユーザーが上書きを承認した）ことを表す */
+function confirmOverwriteIfNeeded(
+  tweetText: string,
+  freeText: string,
+  worldName: string,
+  creatorName: string,
+): boolean {
+  const hasContent =
+    tweetText.trim() !== '' ||
+    freeText.trim() !== '' ||
+    worldName.trim() !== '' ||
+    creatorName.trim() !== '';
+  if (!hasContent) return true;
+  return window.confirm('現在の入力内容は上書きされます。続行しますか?');
 }
 
 export function useTweetState() {
@@ -245,7 +289,7 @@ export function useTweetState() {
     includeWorldUrl: boolean;
   }> = {};
   if (typeof window !== 'undefined') {
-    const stored = localStorage.getItem('tweet-state');
+    const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       try {
         initialData = JSON.parse(stored);
@@ -269,10 +313,10 @@ export function useTweetState() {
   const [worldName, setWorldName] = useState(initialData.worldName || '');
   const [creatorName, setCreatorName] = useState(initialData.creatorName || '');
   const [instrumentEmoji, setInstrumentEmoji] = useState(
-    initialData.instrumentEmoji || '🎸',
+    initialData.instrumentEmoji || DEFAULT_INSTRUMENT_EMOJI,
   );
   const [suffixEmoji, setSuffixEmoji] = useState(
-    initialData.suffixEmoji || '🏘️',
+    initialData.suffixEmoji || DEFAULT_SUFFIX_EMOJI,
   );
   const [structuredTemplate, setStructuredTemplate] = useState<string[]>(
     initialData.structuredTemplate || [],
@@ -363,7 +407,7 @@ export function useTweetState() {
       includeWorldUrl,
     };
     if (typeof window !== 'undefined') {
-      localStorage.setItem('tweet-state', JSON.stringify(data));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     }
   }, [
     tweetText,
@@ -378,16 +422,11 @@ export function useTweetState() {
     includeWorldUrl,
   ]);
 
-  const referenceDate = new Date('2025-12-21');
+  const referenceDate = new Date(2025, 11, 21);
   const referenceMeetingNumber = 253;
 
   // 今週（直近の日曜日）のスケジュールエントリを取得
-  const upcomingSunday = (() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    while (d.getDay() !== 0) d.setDate(d.getDate() + 1);
-    return d;
-  })();
+  const upcomingSunday = getUpcomingSunday();
   const thisWeekEntry = findEntryByDate(sheetSchedule, upcomingSunday);
 
   // 今週エントリのURLが変わるたびに VRChat API からワールド詳細を取得する。
@@ -414,25 +453,13 @@ export function useTweetState() {
 
   const generateThisWeeksSchedule = () => {
     if (
-      tweetText.trim() !== '' ||
-      freeText.trim() !== '' ||
-      worldName.trim() !== '' ||
-      creatorName.trim() !== ''
+      !confirmOverwriteIfNeeded(tweetText, freeText, worldName, creatorName)
     ) {
-      const confirmed = window.confirm(
-        '現在の入力内容は上書きされます。続行しますか?',
-      );
-      if (!confirmed) {
-        return;
-      }
+      return;
     }
     setIsLoadingSchedule(true);
     setTimeout(() => {
-      const today = new Date();
-      const upcomingSunday = new Date(today);
-      while (upcomingSunday.getDay() !== 0) {
-        upcomingSunday.setDate(upcomingSunday.getDate() + 1);
-      }
+      const upcomingSunday = getUpcomingSunday();
       const month = upcomingSunday.getMonth() + 1;
       const day = upcomingSunday.getDate();
 
@@ -459,11 +486,11 @@ export function useTweetState() {
       const sheetWorldUrl = sheetEntry?.worldUrl || '';
 
       const template =
-        `自由文 #あ茶会\n\n` +
-        `第${meetingNumber}回 ${instrumentEmoji}題名のないお茶会${suffixEmoji}\n` +
-        `【日時】${month}月${day}日(日) 14:30〜16:00\n` +
-        `【場所】${sheetWorld || 'ワールド名'} By ${sheetCreator || 'クリエイター名'}\n` +
-        `【参加方法】Group＋「題名のないお茶会」にjoin`;
+        `${PLACEHOLDER_FREE_TEXT} ${HASHTAG}\n\n` +
+        `第${meetingNumber}回 ${instrumentEmoji}${EVENT_TITLE}${suffixEmoji}\n` +
+        `【日時】${month}月${day}日(日) ${DEFAULT_EVENT_TIME}\n` +
+        `【場所】${sheetWorld || PLACEHOLDER_WORLD_NAME} By ${sheetCreator || PLACEHOLDER_CREATOR_NAME}\n` +
+        `【参加方法】Group＋「${EVENT_TITLE}」にjoin`;
       setTweetText(template);
       setStructuredTemplate(template.split('\n'));
       setFreeText('');
@@ -477,17 +504,9 @@ export function useTweetState() {
 
   const generateScheduleAnnouncementTweet = () => {
     if (
-      tweetText.trim() !== '' ||
-      freeText.trim() !== '' ||
-      worldName.trim() !== '' ||
-      creatorName.trim() !== ''
+      !confirmOverwriteIfNeeded(tweetText, freeText, worldName, creatorName)
     ) {
-      const confirmed = window.confirm(
-        '現在の入力内容は上書きされます。続行しますか?',
-      );
-      if (!confirmed) {
-        return;
-      }
+      return;
     }
     const announcement = generateScheduleAnnouncement(sheetSchedule);
     if (!announcement) {
@@ -534,14 +553,14 @@ export function useTweetState() {
 
   const clearStoredData = () => {
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('tweet-state');
+      localStorage.removeItem(STORAGE_KEY);
     }
     setTweetText('');
     setFreeText('');
     setWorldName('');
     setCreatorName('');
-    setInstrumentEmoji('🎸');
-    setSuffixEmoji('🏘️');
+    setInstrumentEmoji(DEFAULT_INSTRUMENT_EMOJI);
+    setSuffixEmoji(DEFAULT_SUFFIX_EMOJI);
     setStructuredTemplate([]);
     setWorldUrl('');
     setIncludeWorldUrl(false);
@@ -595,7 +614,6 @@ export function useTweetState() {
     setInstrumentEmoji,
     suffixEmoji,
     setSuffixEmoji,
-    structuredTemplate,
     worldUrl,
     setWorldUrl,
     includeWorldUrl,

@@ -14,21 +14,24 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v2
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Run Biome Check
         run: npx biome check .
 
       - name: Run Biome Format
         run: npx biome format .
+
+      - name: Run type check
+        run: npm run typecheck
 
       - name: Run tests
         run: npx vitest run

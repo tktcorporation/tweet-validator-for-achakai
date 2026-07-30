@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Calendar,
   Hash,
@@ -20,6 +20,64 @@ import {
   FileText,
 } from 'lucide-react';
 import useTweetState, { instrumentEmojiArray } from './hooks/useTweetState';
+import {
+  formatDateForSheet,
+  getUpcomingSunday,
+  parseSheetDate,
+} from './lib/fetchSheetSchedule';
+import {
+  DEFAULT_INSTRUMENT_EMOJI,
+  DEFAULT_SUFFIX_EMOJI,
+  HASHTAG,
+} from './lib/tweetTemplate';
+
+function EmojiPicker({
+  label,
+  value,
+  onSelect,
+  copiedEmoji,
+  onCopy,
+}: {
+  label: string;
+  value: string;
+  onSelect: (emoji: string) => void;
+  copiedEmoji: string | null;
+  onCopy: (emoji: string) => void;
+}) {
+  return (
+    <div>
+      <span className="text-xs font-medium text-neutral-medium uppercase tracking-wide">
+        {label}
+      </span>
+      <div className="flex flex-wrap gap-1.5 mt-2">
+        {instrumentEmojiArray.map((emoji) => (
+          <div key={emoji} className="relative">
+            <button
+              type="button"
+              onClick={() => {
+                onSelect(emoji);
+                onCopy(emoji);
+              }}
+              className={`p-2 text-xl rounded-lg transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-brand-primary ${
+                value === emoji
+                  ? 'bg-brand-primary/10 ring-2 ring-brand-primary'
+                  : 'bg-neutral-light hover:bg-neutral-medium/20'
+              }`}
+              aria-label={`絵文字を選択: ${emoji}`}
+            >
+              {emoji}
+            </button>
+            {copiedEmoji === emoji && (
+              <span className="absolute -top-7 left-1/2 -translate-x-1/2 text-xs bg-neutral-dark text-white px-2 py-0.5 rounded-md shadow-lg whitespace-nowrap z-10">
+                Copied!
+              </span>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function App() {
   const {
@@ -68,12 +126,18 @@ function App() {
   const [isScheduleSectionOpen, setIsScheduleSectionOpen] = useState(false);
 
   // 今週の日曜日を計算（スケジュールのハイライト用）
-  const getUpcomingSunday = () => {
-    const d = new Date();
-    while (d.getDay() !== 0) d.setDate(d.getDate() + 1);
-    return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
-  };
-  const upcomingSundayStr = getUpcomingSunday();
+  const upcomingSundayStr = formatDateForSheet(getUpcomingSunday());
+
+  // 「夜」関連ワード警告バナー。isValid の true/false 分岐どちらでも表示位置は異なるが
+  // 内容は共通なのでここで一度だけ組み立てる。
+  const nightWordWarning = validation.hasNightWord ? (
+    <div className="p-3 rounded-lg flex items-center bg-yellow-50 border border-yellow-200">
+      <AlertTriangle className="w-5 h-5 text-yellow-600 mr-2 flex-shrink-0" />
+      <span className="text-sm text-yellow-800">
+        「夜」関連の言葉が含まれています。開催は昼ですが、意図通りですか？
+      </span>
+    </div>
+  ) : null;
 
   return (
     <div className="min-h-screen bg-neutral-ultralight py-8 px-4 sm:px-6 font-sans">
@@ -88,7 +152,9 @@ function App() {
         {/* Sheet Schedule Section */}
         <section className="bg-white rounded-xl shadow-lg mb-6 overflow-hidden">
           <button
+            type="button"
             onClick={() => setIsScheduleSectionOpen(!isScheduleSectionOpen)}
+            aria-expanded={isScheduleSectionOpen}
             className="w-full px-5 py-3 flex items-center justify-between text-left hover:bg-neutral-light/50 transition-colors"
           >
             <div className="flex items-center gap-2">
@@ -121,6 +187,7 @@ function App() {
                 <div className="mb-3 p-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700 flex items-center justify-between">
                   <span>{sheetError}</span>
                   <button
+                    type="button"
                     onClick={loadSheetSchedule}
                     className="px-2 py-1 bg-amber-100 hover:bg-amber-200 rounded text-amber-800 font-medium transition-colors"
                   >
@@ -160,8 +227,7 @@ function App() {
                       {sheetSchedule
                         .filter((entry) => {
                           // 過去2週間以降のエントリのみ表示
-                          const [y, m, d] = entry.date.split('/').map(Number);
-                          const entryDate = new Date(y, m - 1, d);
+                          const entryDate = parseSheetDate(entry.date);
                           const twoWeeksAgo = new Date();
                           twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
                           return entryDate >= twoWeeksAgo;
@@ -286,6 +352,7 @@ function App() {
                   の予定が残っています。次の開催予定を作成しましょう。
                 </p>
                 <button
+                  type="button"
                   onClick={generateThisWeeksSchedule}
                   disabled={isLoadingSchedule}
                   className="px-5 py-2.5 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-all duration-150 text-sm font-semibold shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-amber-400 focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed flex items-center"
@@ -317,6 +384,7 @@ function App() {
             {!isScheduleExpired && (
               <div className="flex flex-wrap gap-2">
                 <button
+                  type="button"
                   onClick={generateThisWeeksSchedule}
                   disabled={isLoadingSchedule}
                   className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-opacity-90 transition-all duration-150 text-sm font-medium shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center"
@@ -334,6 +402,7 @@ function App() {
                   )}
                 </button>
                 <button
+                  type="button"
                   onClick={generateScheduleAnnouncementTweet}
                   disabled={isSheetLoading}
                   className="px-4 py-2 bg-brand-secondary text-white rounded-lg hover:bg-opacity-90 transition-all duration-150 text-sm font-medium shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-brand-secondary focus:ring-offset-2 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center"
@@ -348,6 +417,7 @@ function App() {
           {/* Edit Mode Toggle */}
           <div className="flex items-center gap-2 mb-4 p-1 bg-neutral-light rounded-lg">
             <button
+              type="button"
               onClick={() => {
                 if (structuredMode) switchToStructuredMode();
                 setStructuredMode(false);
@@ -362,6 +432,7 @@ function App() {
               直接編集
             </button>
             <button
+              type="button"
               onClick={() => {
                 if (!structuredMode) switchToStructuredMode();
               }}
@@ -408,7 +479,7 @@ function App() {
                     value={instrumentEmoji}
                     onChange={(e) => setInstrumentEmoji(e.target.value)}
                     className="w-full p-3 border border-neutral-medium/50 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary text-center text-xl"
-                    placeholder="🎸"
+                    placeholder={DEFAULT_INSTRUMENT_EMOJI}
                   />
                 </div>
                 <div>
@@ -424,7 +495,7 @@ function App() {
                     value={suffixEmoji}
                     onChange={(e) => setSuffixEmoji(e.target.value)}
                     className="w-full p-3 border border-neutral-medium/50 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary text-center text-xl"
-                    placeholder="🏘️"
+                    placeholder={DEFAULT_SUFFIX_EMOJI}
                   />
                 </div>
               </div>
@@ -533,6 +604,7 @@ function App() {
           <div className="flex flex-wrap gap-2 mt-4 pt-4 border-t border-neutral-medium/20">
             <div className="relative">
               <button
+                type="button"
                 onClick={handleTweetCopy}
                 disabled={validation.hasPlaceholders}
                 className="px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-opacity-90 transition-all duration-150 text-sm font-medium shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-brand-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
@@ -547,6 +619,7 @@ function App() {
               )}
             </div>
             <button
+              type="button"
               onClick={clearStoredData}
               className="px-4 py-2 bg-neutral-light text-neutral-dark rounded-lg hover:bg-neutral-medium/30 transition-all duration-150 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-neutral-medium focus:ring-offset-2 flex items-center"
             >
@@ -564,7 +637,9 @@ function App() {
         {/* Emoji Picker Section (Collapsible) */}
         <section className="bg-white rounded-xl shadow-lg mb-6 overflow-hidden">
           <button
+            type="button"
             onClick={() => setIsEmojiSectionOpen(!isEmojiSectionOpen)}
+            aria-expanded={isEmojiSectionOpen}
             className="w-full px-5 py-3 flex items-center justify-between text-left hover:bg-neutral-light/50 transition-colors"
           >
             <span className="text-sm font-medium text-neutral-dark">
@@ -578,66 +653,20 @@ function App() {
           </button>
           {isEmojiSectionOpen && (
             <div className="px-5 pb-4 space-y-4">
-              <div>
-                <span className="text-xs font-medium text-neutral-medium uppercase tracking-wide">
-                  お茶会絵文字
-                </span>
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {instrumentEmojiArray.map((emoji, index) => (
-                    <div key={index} className="relative">
-                      <button
-                        onClick={() => {
-                          setInstrumentEmoji(emoji);
-                          handleEmojiCopy(emoji);
-                        }}
-                        className={`p-2 text-xl rounded-lg transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-brand-primary ${
-                          instrumentEmoji === emoji
-                            ? 'bg-brand-primary/10 ring-2 ring-brand-primary'
-                            : 'bg-neutral-light hover:bg-neutral-medium/20'
-                        }`}
-                        aria-label={`Select emoji ${emoji}`}
-                      >
-                        {emoji}
-                      </button>
-                      {showCopyFeedbackFor === emoji && (
-                        <span className="absolute -top-7 left-1/2 -translate-x-1/2 text-xs bg-neutral-dark text-white px-2 py-0.5 rounded-md shadow-lg whitespace-nowrap z-10">
-                          Copied!
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <span className="text-xs font-medium text-neutral-medium uppercase tracking-wide">
-                  後ろの絵文字
-                </span>
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {instrumentEmojiArray.map((emoji, index) => (
-                    <div key={index} className="relative">
-                      <button
-                        onClick={() => {
-                          setSuffixEmoji(emoji);
-                          handleEmojiCopy(emoji);
-                        }}
-                        className={`p-2 text-xl rounded-lg transition-all duration-150 focus:outline-none focus:ring-2 focus:ring-brand-primary ${
-                          suffixEmoji === emoji
-                            ? 'bg-brand-primary/10 ring-2 ring-brand-primary'
-                            : 'bg-neutral-light hover:bg-neutral-medium/20'
-                        }`}
-                        aria-label={`Select emoji ${emoji}`}
-                      >
-                        {emoji}
-                      </button>
-                      {showCopyFeedbackFor === emoji && (
-                        <span className="absolute -top-7 left-1/2 -translate-x-1/2 text-xs bg-neutral-dark text-white px-2 py-0.5 rounded-md shadow-lg whitespace-nowrap z-10">
-                          Copied!
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <EmojiPicker
+                label="お茶会絵文字"
+                value={instrumentEmoji}
+                onSelect={setInstrumentEmoji}
+                copiedEmoji={showCopyFeedbackFor}
+                onCopy={handleEmojiCopy}
+              />
+              <EmojiPicker
+                label="後ろの絵文字"
+                value={suffixEmoji}
+                onSelect={setSuffixEmoji}
+                copiedEmoji={showCopyFeedbackFor}
+                onCopy={handleEmojiCopy}
+              />
             </div>
           )}
         </section>
@@ -672,7 +701,7 @@ function App() {
                   },
                   {
                     Icon: Hash,
-                    label: '#あ茶会 ハッシュタグ',
+                    label: `${HASHTAG} ハッシュタグ`,
                     isValid: validation.hasHashtag,
                     dataTestId: 'validation-hashtag',
                   },
@@ -704,13 +733,8 @@ function App() {
                   </div>
                 ))}
               </div>
-              {validation.hasNightWord && (
-                <div className="mt-4 p-3 rounded-lg flex items-center bg-yellow-50 border border-yellow-200">
-                  <AlertTriangle className="w-5 h-5 text-yellow-600 mr-2 flex-shrink-0" />
-                  <span className="text-sm text-yellow-800">
-                    「夜」関連の言葉が含まれています。開催は昼ですが、意図通りですか？
-                  </span>
-                </div>
+              {nightWordWarning && (
+                <div className="mt-4">{nightWordWarning}</div>
               )}
               <div className="mt-5 p-4 rounded-lg text-center bg-red-50 border border-red-200">
                 <div className="flex items-center justify-center gap-2 text-red-600 font-semibold">
@@ -721,13 +745,8 @@ function App() {
             </>
           ) : (
             <>
-              {validation.hasNightWord && (
-                <div className="mb-4 p-3 rounded-lg flex items-center bg-yellow-50 border border-yellow-200">
-                  <AlertTriangle className="w-5 h-5 text-yellow-600 mr-2 flex-shrink-0" />
-                  <span className="text-sm text-yellow-800">
-                    「夜」関連の言葉が含まれています。開催は昼ですが、意図通りですか？
-                  </span>
-                </div>
+              {nightWordWarning && (
+                <div className="mb-4">{nightWordWarning}</div>
               )}
               <div className="p-4 rounded-lg text-center bg-green-50 border border-green-200 mb-5">
                 <div className="flex items-center justify-center gap-2 text-green-600 font-semibold">

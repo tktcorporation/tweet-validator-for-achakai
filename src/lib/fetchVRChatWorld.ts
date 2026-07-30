@@ -2,21 +2,15 @@
  * VRChat API からワールド情報を取得するユーティリティ。
  *
  * 背景: スプレッドシートのURL欄に記録された VRChat ワールドURLから
- * ワールドの説明文・サムネイル等を取得し、画面に表示する。
+ * ワールドの説明文を取得し、画面に表示する。
  * ブラウザから VRChat API を直接叩くと CORS と UA 要件で失敗するため、
  * 同一オリジンの Netlify Function (netlify/functions/vrchat-world.ts) 経由で呼ぶ。
  * 取得に失敗した場合は null を返し、呼び出し元はシート記載の説明にフォールバックする。
  */
 
 export interface VRChatWorldInfo {
-  /** ワールド名（スプレッドシートの値と一致確認用） */
-  name: string;
   /** ワールドの説明文 */
   description: string;
-  /** サムネイル画像URL */
-  imageUrl: string;
-  /** 作者の表示名 */
-  authorName: string;
 }
 
 /**
@@ -48,12 +42,23 @@ export async function fetchVRChatWorldInfo(
       { headers: { Accept: 'application/json' } },
     );
     if (!res.ok) return null;
-    const data = await res.json();
+    const data: unknown = await res.json();
+    if (!data || typeof data !== 'object') return null;
+    // ここは fetchGroupInstances.ts と違い Zod を使わず手書きの型ガードにしている。
+    // fetchGroupInstances.ts は Node スクリプト専用で zod はブラウザバンドルに乗らないが、
+    // この関数はブラウザから呼ばれる（useTweetState.ts 経由）ため、1フィールドの検証の
+    // ために zod をバンドルへ追加するコストに見合わない。
+    const obj = data as Record<string, unknown>;
+    // "description" キーが存在するのに文字列でない場合は VRChat 側のレスポンス形状が
+    // 変わった可能性が高い（キー自体が無いケースとは区別してコンソールに残す）。
+    if ('description' in obj && typeof obj.description !== 'string') {
+      console.warn(
+        '[fetchVRChatWorldInfo] unexpected type for "description" field',
+        obj.description,
+      );
+    }
     return {
-      name: data.name ?? '',
-      description: data.description ?? '',
-      imageUrl: data.imageUrl ?? '',
-      authorName: data.authorName ?? '',
+      description: typeof obj.description === 'string' ? obj.description : '',
     };
   } catch {
     // Function 未デプロイ/ネットワーク障害等はすべて null で返し、シート値へフォールバック

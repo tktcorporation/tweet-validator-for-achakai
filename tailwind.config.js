@@ -8,7 +8,7 @@ export default {
         'brand-secondary': '#FF7F50', // Coral
         'brand-accent': '#F97316', // Bright Orange
         'neutral-light': '#F3F4F6', // Cool Gray 100
-        'neutral-medium': '#9CA3AF', // Cool Gray 400
+        'neutral-medium': '#6B7280', // Cool Gray 500（白背景コントラスト比 約4.8:1 / WCAG AA）
         'neutral-dark': '#374151', // Cool Gray 700
         'neutral-ultralight': '#EFF6FF', // Effectively a very light gray/blue tint
       },
