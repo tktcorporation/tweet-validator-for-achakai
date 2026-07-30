@@ -25,6 +25,11 @@ import {
   getUpcomingSunday,
   parseSheetDate,
 } from './lib/fetchSheetSchedule';
+import {
+  DEFAULT_INSTRUMENT_EMOJI,
+  DEFAULT_SUFFIX_EMOJI,
+  HASHTAG,
+} from './lib/tweetTemplate';
 
 function EmojiPicker({
   label,
@@ -474,7 +479,7 @@ function App() {
                     value={instrumentEmoji}
                     onChange={(e) => setInstrumentEmoji(e.target.value)}
                     className="w-full p-3 border border-neutral-medium/50 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary text-center text-xl"
-                    placeholder="🎸"
+                    placeholder={DEFAULT_INSTRUMENT_EMOJI}
                   />
                 </div>
                 <div>
@@ -490,7 +495,7 @@ function App() {
                     value={suffixEmoji}
                     onChange={(e) => setSuffixEmoji(e.target.value)}
                     className="w-full p-3 border border-neutral-medium/50 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary text-center text-xl"
-                    placeholder="🏘️"
+                    placeholder={DEFAULT_SUFFIX_EMOJI}
                   />
                 </div>
               </div>
@@ -696,7 +701,7 @@ function App() {
                   },
                   {
                     Icon: Hash,
-                    label: '#あ茶会 ハッシュタグ',
+                    label: `${HASHTAG} ハッシュタグ`,
                     isValid: validation.hasHashtag,
                     dataTestId: 'validation-hashtag',
                   },

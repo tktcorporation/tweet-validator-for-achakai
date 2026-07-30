@@ -1,3 +1,5 @@
+import { DEFAULT_EVENT_TIME, HASHTAG } from './tweetTemplate';
+
 const SPREADSHEET_ID = '1ZVTxdMsSbfTX_0RCDajiR2VeDWETeabBUnNhyd4IYrg';
 const SCHEDULE_SHEET_GID = '342034787';
 
@@ -209,7 +211,7 @@ export function generateDiscordWeeklyMessage(
   }
 
   // 確定済み
-  let msg = `🍵 今週のあ茶会 第${entry.meetingNumber}回（${dateLabel}）\n\n📍 ${entry.worldName} By ${entry.creator}\n⏰ 14:30〜16:00`;
+  let msg = `🍵 今週のあ茶会 第${entry.meetingNumber}回（${dateLabel}）\n\n📍 ${entry.worldName} By ${entry.creator}\n⏰ ${DEFAULT_EVENT_TIME}`;
   if (entry.worldUrl) {
     msg += `\n🔗 ${entry.worldUrl}`;
   }
@@ -241,7 +243,7 @@ export function generateScheduleAnnouncement(
 
   const firstMonth = Number.parseInt(upcoming[0].date.split('/')[1], 10);
 
-  let text = `#あ茶会 ${firstMonth}月の予定をお知らせします\n\n`;
+  let text = `${HASHTAG} ${firstMonth}月の予定をお知らせします\n\n`;
 
   // Track years that already had an active event (before or within the range)
   const yearsWithPriorActive = new Set<number>();

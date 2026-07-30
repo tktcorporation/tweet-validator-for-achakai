@@ -12,6 +12,18 @@ import {
   fetchVRChatWorldInfo,
   type VRChatWorldInfo,
 } from '../lib/fetchVRChatWorld';
+import {
+  DEFAULT_EVENT_TIME,
+  DEFAULT_INSTRUMENT_EMOJI,
+  DEFAULT_SUFFIX_EMOJI,
+  EVENT_TITLE,
+  HASHTAG,
+  PLACEHOLDER_CREATOR_NAME,
+  PLACEHOLDER_FREE_TEXT,
+  PLACEHOLDER_WORLD_NAME,
+} from '../lib/tweetTemplate';
+
+const STORAGE_KEY = 'tweet-state';
 
 export const instrumentEmojiArray =
   '🎸 🎹 🥁 🎺 🎻 🎷 🪕 🪗 🎤 🎧 📯 🪘 🎼'.split(' ');
@@ -78,21 +90,26 @@ export function parseStructuredFields(text: string): ParsedFields | null {
   const worldUrl = trailing?.url ?? '';
   const body = trailing?.textWithoutUrl ?? text;
 
-  const freeMatch = body.match(/^[\s\S]*?(?=#あ茶会)/);
+  const freeMatch = body.match(new RegExp(`^[\\s\\S]*?(?=${HASHTAG})`));
   const free = freeMatch ? freeMatch[0].trim() : '';
   const location = extractLocation(body);
   if (!location) {
     return null;
   }
   const meetingEmojiMatch = body.match(
-    /第\d+回\s*(.*?)題名のないお茶会([^\n]*)/,
+    new RegExp(`第\\d+回\\s*(.*?)${EVENT_TITLE}([^\\n]*)`),
   );
-  const instrument = meetingEmojiMatch ? meetingEmojiMatch[1].trim() : '🎸';
-  const suffix = meetingEmojiMatch ? meetingEmojiMatch[2].trim() : '🏘️';
+  const instrument = meetingEmojiMatch
+    ? meetingEmojiMatch[1].trim()
+    : DEFAULT_INSTRUMENT_EMOJI;
+  const suffix = meetingEmojiMatch
+    ? meetingEmojiMatch[2].trim()
+    : DEFAULT_SUFFIX_EMOJI;
   return {
-    freeText: free === '自由文' ? '' : free,
-    world: location.world === 'ワールド名' ? '' : location.world,
-    creator: location.creator === 'クリエイター名' ? '' : location.creator,
+    freeText: free === PLACEHOLDER_FREE_TEXT ? '' : free,
+    world: location.world === PLACEHOLDER_WORLD_NAME ? '' : location.world,
+    creator:
+      location.creator === PLACEHOLDER_CREATOR_NAME ? '' : location.creator,
     instrument,
     suffix,
     worldUrl,
@@ -112,7 +129,7 @@ export function buildStructuredTweet(
 ): string {
   if (!template.length) return '';
   const lines = [...template];
-  lines[0] = `${free} #あ茶会`;
+  lines[0] = `${free} ${HASHTAG}`;
 
   // Replace the entire location block (【場所】 line and any continuation lines
   // before the next 【 section). This prevents duplicates when world names
@@ -129,9 +146,9 @@ export function buildStructuredTweet(
 
   const body = lines
     .map((line) => {
-      if (line.includes('題名のないお茶会')) {
+      if (line.includes(EVENT_TITLE)) {
         return line.replace(
-          /(第\d+回 )(.+?)(題名のないお茶会)([^\n]*)/,
+          new RegExp(`(第\\d+回 )(.+?)(${EVENT_TITLE})([^\\n]*)`),
           `$1${emoji}$3${suffix}`,
         );
       }
@@ -162,10 +179,12 @@ export function validateTweet(text: string, currentDate: Date = new Date()) {
   const dateMatch = text.match(dateRegex);
   const timeRegex = /(\d{1,2}):(\d{2})〜(\d{1,2}):(\d{2})/;
   const timeMatch = text.match(timeRegex);
-  const hasHashtag = text.includes('#あ茶会');
+  const hasHashtag = text.includes(HASHTAG);
   const location = extractLocation(text);
   const hasValidLocation = location !== null;
-  const placeholdersRegex = /(ワールド名|クリエイター名|自由文)/;
+  const placeholdersRegex = new RegExp(
+    `(${PLACEHOLDER_WORLD_NAME}|${PLACEHOLDER_CREATOR_NAME}|${PLACEHOLDER_FREE_TEXT})`,
+  );
   const hasPlaceholders = placeholdersRegex.test(text);
   const nightWordRegex = /(夜|宵|今宵|今夜)/;
   const hasNightWord = nightWordRegex.test(text);
@@ -270,7 +289,7 @@ export function useTweetState() {
     includeWorldUrl: boolean;
   }> = {};
   if (typeof window !== 'undefined') {
-    const stored = localStorage.getItem('tweet-state');
+    const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
       try {
         initialData = JSON.parse(stored);
@@ -294,10 +313,10 @@ export function useTweetState() {
   const [worldName, setWorldName] = useState(initialData.worldName || '');
   const [creatorName, setCreatorName] = useState(initialData.creatorName || '');
   const [instrumentEmoji, setInstrumentEmoji] = useState(
-    initialData.instrumentEmoji || '🎸',
+    initialData.instrumentEmoji || DEFAULT_INSTRUMENT_EMOJI,
   );
   const [suffixEmoji, setSuffixEmoji] = useState(
-    initialData.suffixEmoji || '🏘️',
+    initialData.suffixEmoji || DEFAULT_SUFFIX_EMOJI,
   );
   const [structuredTemplate, setStructuredTemplate] = useState<string[]>(
     initialData.structuredTemplate || [],
@@ -388,7 +407,7 @@ export function useTweetState() {
       includeWorldUrl,
     };
     if (typeof window !== 'undefined') {
-      localStorage.setItem('tweet-state', JSON.stringify(data));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
     }
   }, [
     tweetText,
@@ -467,11 +486,11 @@ export function useTweetState() {
       const sheetWorldUrl = sheetEntry?.worldUrl || '';
 
       const template =
-        `自由文 #あ茶会\n\n` +
-        `第${meetingNumber}回 ${instrumentEmoji}題名のないお茶会${suffixEmoji}\n` +
-        `【日時】${month}月${day}日(日) 14:30〜16:00\n` +
-        `【場所】${sheetWorld || 'ワールド名'} By ${sheetCreator || 'クリエイター名'}\n` +
-        `【参加方法】Group＋「題名のないお茶会」にjoin`;
+        `${PLACEHOLDER_FREE_TEXT} ${HASHTAG}\n\n` +
+        `第${meetingNumber}回 ${instrumentEmoji}${EVENT_TITLE}${suffixEmoji}\n` +
+        `【日時】${month}月${day}日(日) ${DEFAULT_EVENT_TIME}\n` +
+        `【場所】${sheetWorld || PLACEHOLDER_WORLD_NAME} By ${sheetCreator || PLACEHOLDER_CREATOR_NAME}\n` +
+        `【参加方法】Group＋「${EVENT_TITLE}」にjoin`;
       setTweetText(template);
       setStructuredTemplate(template.split('\n'));
       setFreeText('');
@@ -534,14 +553,14 @@ export function useTweetState() {
 
   const clearStoredData = () => {
     if (typeof window !== 'undefined') {
-      localStorage.removeItem('tweet-state');
+      localStorage.removeItem(STORAGE_KEY);
     }
     setTweetText('');
     setFreeText('');
     setWorldName('');
     setCreatorName('');
-    setInstrumentEmoji('🎸');
-    setSuffixEmoji('🏘️');
+    setInstrumentEmoji(DEFAULT_INSTRUMENT_EMOJI);
+    setSuffixEmoji(DEFAULT_SUFFIX_EMOJI);
     setStructuredTemplate([]);
     setWorldUrl('');
     setIncludeWorldUrl(false);
