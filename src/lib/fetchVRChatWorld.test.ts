@@ -45,8 +45,6 @@ describe('fetchVRChatWorldInfo', () => {
         JSON.stringify({
           name: 'Test World',
           description: 'desc',
-          imageUrl: 'https://example.com/img.png',
-          authorName: 'Author',
         }),
         { status: 200, headers: { 'content-type': 'application/json' } },
       ),
@@ -61,8 +59,19 @@ describe('fetchVRChatWorldInfo', () => {
     expect(info).toEqual({
       name: 'Test World',
       description: 'desc',
-      imageUrl: 'https://example.com/img.png',
-      authorName: 'Author',
+    });
+  });
+
+  it('レスポンスの型が不正なフィールドは空文字にフォールバックする', async () => {
+    const mockFetch = vi.mocked(globalThis.fetch);
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ name: 123, description: null }), {
+        status: 200,
+      }),
+    );
+    expect(await fetchVRChatWorldInfo('wrld_abc')).toEqual({
+      name: '',
+      description: '',
     });
   });
 

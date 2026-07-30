@@ -20,6 +20,17 @@ export async function fetchScheduleFromSheet(): Promise<ScheduleEntry[]> {
   if (!response.ok)
     throw new Error(`Failed to fetch schedule: ${response.status}`);
   const csv = await response.text();
+  const rows = parseCSV(csv);
+  // 共有設定変更等でCSVではないレスポンス（権限エラーページ等）が200で返ることがある。
+  // ヘッダー行が見つからない場合は「予定0件」ではなく異常として扱う。
+  const hasHeaders =
+    rows.some((r) => r[0]?.trim() === '開催予定日') &&
+    rows.some((r) => r[0]?.trim() === '開催回数');
+  if (!hasHeaders) {
+    throw new Error(
+      'スプレッドシートの形式が想定と異なります（ヘッダー行が見つかりません）',
+    );
+  }
   return parseScheduleCSV(csv);
 }
 
@@ -78,6 +89,13 @@ export function parseCSV(text: string): string[][] {
   return rows;
 }
 
+/** 全角数字を半角に変換する（スプレッドシートの日本語IME入力による混入対策） */
+function toHalfWidthDigits(s: string): string {
+  return s.replace(/[０-９]/g, (d) =>
+    String.fromCharCode(d.charCodeAt(0) - 0xfee0),
+  );
+}
+
 export function parseScheduleCSV(csv: string): ScheduleEntry[] {
   const rows = parseCSV(csv);
 
@@ -101,7 +119,7 @@ export function parseScheduleCSV(csv: string): ScheduleEntry[] {
     const dateStr = dateRow[i]?.trim() || '';
     if (!dateStr) continue;
 
-    const meetingStr = meetingRow[i]?.trim() || '';
+    const meetingStr = toHalfWidthDigits(meetingRow[i]?.trim() || '');
     const meetingNumber =
       meetingStr && meetingStr !== '-' ? parseInt(meetingStr, 10) : null;
 
@@ -127,6 +145,20 @@ export function formatDateForSheet(date: Date): string {
   return `${y}/${m}/${d}`;
 }
 
+/** "YYYY/MM/DD" 形式のシート日付文字列を Date に変換する（formatDateForSheet の逆変換） */
+export function parseSheetDate(dateStr: string): Date {
+  const [y, m, d] = dateStr.split('/').map(Number);
+  return new Date(y, m - 1, d);
+}
+
+/** 直近の日曜日（currentDate が日曜ならその日）を返す。時刻は 00:00:00 に正規化される。 */
+export function getUpcomingSunday(currentDate: Date = new Date()): Date {
+  const d = new Date(currentDate);
+  d.setHours(0, 0, 0, 0);
+  while (d.getDay() !== 0) d.setDate(d.getDate() + 1);
+  return d;
+}
+
 /** Find the schedule entry for a specific date */
 export function findEntryByDate(
   entries: ScheduleEntry[],
@@ -140,10 +172,7 @@ export function findEntryByDate(
 export function deriveSkippedDates(entries: ScheduleEntry[]): Date[] {
   return entries
     .filter((e) => e.meetingNumber === null)
-    .map((e) => {
-      const [y, m, d] = e.date.split('/').map(Number);
-      return new Date(y, m - 1, d);
-    });
+    .map((e) => parseSheetDate(e.date));
 }
 
 /**
@@ -157,10 +186,7 @@ export function generateDiscordWeeklyMessage(
   currentDate: Date = new Date(),
 ): string {
   // 次の日曜を求める（当日が日曜ならその日）
-  const nextSunday = new Date(currentDate);
-  nextSunday.setHours(0, 0, 0, 0);
-  while (nextSunday.getDay() !== 0)
-    nextSunday.setDate(nextSunday.getDate() + 1);
+  const nextSunday = getUpcomingSunday(currentDate);
 
   const m = nextSunday.getMonth() + 1;
   const d = nextSunday.getDate();
@@ -204,41 +230,35 @@ export function generateScheduleAnnouncement(
   weeksCount = 6,
 ): string {
   // Find the nearest upcoming Sunday (including today)
-  const startSunday = new Date(currentDate);
-  startSunday.setHours(0, 0, 0, 0);
-  while (startSunday.getDay() !== 0)
-    startSunday.setDate(startSunday.getDate() + 1);
+  const startSunday = getUpcomingSunday(currentDate);
 
   // Filter entries from startSunday onward
   const upcoming = entries
-    .filter((e) => {
-      const [y, m, d] = e.date.split('/').map(Number);
-      const entryDate = new Date(y, m - 1, d);
-      entryDate.setHours(0, 0, 0, 0);
-      return entryDate >= startSunday;
-    })
+    .filter((e) => parseSheetDate(e.date) >= startSunday)
     .slice(0, weeksCount);
 
   if (upcoming.length === 0) return '';
 
-  const firstMonth = Number.parseInt(upcoming[0].date.split('/')[1]);
+  const firstMonth = Number.parseInt(upcoming[0].date.split('/')[1], 10);
 
   let text = `#あ茶会 ${firstMonth}月の予定をお知らせします\n\n`;
 
   // Track years that already had an active event (before or within the range)
   const yearsWithPriorActive = new Set<number>();
   for (const e of entries) {
-    const [y, m, d] = e.date.split('/').map(Number);
-    const entryDate = new Date(y, m - 1, d);
+    const entryDate = parseSheetDate(e.date);
     if (entryDate >= startSunday) break;
     if (e.meetingNumber !== null) {
-      yearsWithPriorActive.add(y);
+      yearsWithPriorActive.add(entryDate.getFullYear());
     }
   }
   const yearsSeenActive = new Set(yearsWithPriorActive);
 
   for (const entry of upcoming) {
-    const [y, m, d] = entry.date.split('/').map(Number);
+    const entryDate = parseSheetDate(entry.date);
+    const y = entryDate.getFullYear();
+    const m = entryDate.getMonth() + 1;
+    const d = entryDate.getDate();
     const isSkipped = entry.meetingNumber === null;
 
     let annotation = '';

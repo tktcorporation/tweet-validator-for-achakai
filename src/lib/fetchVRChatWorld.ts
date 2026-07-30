@@ -13,10 +13,6 @@ export interface VRChatWorldInfo {
   name: string;
   /** ワールドの説明文 */
   description: string;
-  /** サムネイル画像URL */
-  imageUrl: string;
-  /** 作者の表示名 */
-  authorName: string;
 }
 
 /**
@@ -48,12 +44,12 @@ export async function fetchVRChatWorldInfo(
       { headers: { Accept: 'application/json' } },
     );
     if (!res.ok) return null;
-    const data = await res.json();
+    const data: unknown = await res.json();
+    if (!data || typeof data !== 'object') return null;
+    const obj = data as Record<string, unknown>;
     return {
-      name: data.name ?? '',
-      description: data.description ?? '',
-      imageUrl: data.imageUrl ?? '',
-      authorName: data.authorName ?? '',
+      name: typeof obj.name === 'string' ? obj.name : '',
+      description: typeof obj.description === 'string' ? obj.description : '',
     };
   } catch {
     // Function 未デプロイ/ネットワーク障害等はすべて null で返し、シート値へフォールバック

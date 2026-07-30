@@ -5,6 +5,7 @@ import {
   extractLocation,
   extractTrailingWorldUrl,
   validateTweet,
+  countTweetLength,
 } from './useTweetState';
 
 const template = [
@@ -47,6 +48,33 @@ describe('parseStructuredFields', () => {
     const result = parseStructuredFields(template.join('\n'));
     expect(result?.worldUrl).toBe('');
     expect(result?.textWithoutUrl).toBe(template.join('\n'));
+  });
+
+  it('falls back to default emoji when the meeting-number phrase pattern does not match', () => {
+    const text = template
+      .join('\n')
+      .replace('第210回 🎸題名のないお茶会🏘️', '第210回 カスタムタイトル');
+    const result = parseStructuredFields(text);
+    expect(result?.instrument).toBe('🎸');
+    expect(result?.suffix).toBe('🏘️');
+  });
+});
+
+describe('countTweetLength', () => {
+  it('counts half-width ASCII characters as 1 each', () => {
+    expect(countTweetLength('abc123')).toBe(6);
+  });
+
+  it('counts full-width Japanese characters as 2 each', () => {
+    expect(countTweetLength('あいう')).toBe(6);
+  });
+
+  it('counts mixed half-width and full-width text', () => {
+    expect(countTweetLength('abcあいう')).toBe(3 + 6);
+  });
+
+  it('returns 0 for an empty string', () => {
+    expect(countTweetLength('')).toBe(0);
   });
 });
 
@@ -233,6 +261,64 @@ describe('validateTweet', () => {
     expect(result.isValid).toBe(true);
     expect(result.meetingNumber).toBe(999);
     expect(result.extractedInfo.meetingNumber).toBe('第999回');
+  });
+
+  it('marks placeholders as invalid even when other fields are valid', () => {
+    const tweet =
+      'テスト #あ茶会\n\n第254回 🎸題名のないお茶会🏘️\n【日時】12月21日(日) 14:30〜16:00\n【場所】ワールド名 By クリエイター名\n【参加方法】Group＋「題名のないお茶会」にjoin';
+    const currentDate = new Date('2025-12-20');
+    const result = validateTweet(tweet, currentDate);
+    expect(result.hasPlaceholders).toBe(true);
+    expect(result.isValid).toBe(false);
+  });
+
+  it('computes hasValidLocation correctly even when no date is found', () => {
+    const tweet =
+      'テスト #あ茶会\n\n第254回 🎸題名のないお茶会🏘️\n【場所】MyWorld By Creator\n【参加方法】Group＋「題名のないお茶会」にjoin';
+    const result = validateTweet(tweet);
+    expect(result.date).toBeNull();
+    expect(result.hasValidLocation).toBe(true);
+    expect(result.extractedInfo.worldName).toBe('MyWorld');
+    expect(result.extractedInfo.creator).toBe('Creator');
+    expect(result.isValid).toBe(false);
+  });
+
+  it('is invalid when the stated date is not actually a Sunday', () => {
+    // 2026-01-11 is confirmed Sunday (see year calculation tests below), so 1/12 is Monday
+    const tweet =
+      'テスト #あ茶会\n\n第254回 🎸題名のないお茶会🏘️\n【日時】1月12日(日) 14:30〜16:00\n【場所】TestWorld By Creator\n【参加方法】Group＋「題名のないお茶会」にjoin';
+    const currentDate = new Date('2026-01-05');
+    const result = validateTweet(tweet, currentDate);
+    expect(result.isSunday).toBe(false);
+    expect(result.isValid).toBe(false);
+  });
+
+  it('is invalid when the #あ茶会 hashtag is missing', () => {
+    const tweet =
+      'テスト\n\n第254回 🎸題名のないお茶会🏘️\n【日時】12月21日(日) 14:30〜16:00\n【場所】TestWorld By Creator\n【参加方法】Group＋「題名のないお茶会」にjoin';
+    const currentDate = new Date('2025-12-20');
+    const result = validateTweet(tweet, currentDate);
+    expect(result.hasHashtag).toBe(false);
+    expect(result.isValid).toBe(false);
+  });
+
+  it('is invalid when the time range is missing', () => {
+    const tweet =
+      'テスト #あ茶会\n\n第254回 🎸題名のないお茶会🏘️\n【日時】12月21日(日)\n【場所】TestWorld By Creator\n【参加方法】Group＋「題名のないお茶会」にjoin';
+    const currentDate = new Date('2025-12-20');
+    const result = validateTweet(tweet, currentDate);
+    expect(result.hasTime).toBe(false);
+    expect(result.isValid).toBe(false);
+  });
+
+  it('is invalid when the stated date does not exist on the calendar', () => {
+    // 2026年はうるう年ではないため 2月29日は存在せず、Dateコンストラクタは3月1日へ繰り上げる
+    const tweet =
+      'テスト #あ茶会\n\n第254回 🎸題名のないお茶会🏘️\n【日時】2月29日(日) 14:30〜16:00\n【場所】TestWorld By Creator\n【参加方法】Group＋「題名のないお茶会」にjoin';
+    const currentDate = new Date('2026-02-01');
+    const result = validateTweet(tweet, currentDate);
+    expect(result.isSunday).toBe(false);
+    expect(result.isValid).toBe(false);
   });
 
   describe('year calculation', () => {

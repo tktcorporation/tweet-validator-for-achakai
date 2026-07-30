@@ -4,6 +4,7 @@ import {
   findEntryByDate,
   deriveSkippedDates,
   generateScheduleAnnouncement,
+  getUpcomingSunday,
   type ScheduleEntry,
 } from '../lib/fetchSheetSchedule';
 import {
@@ -168,28 +169,33 @@ export function validateTweet(text: string, currentDate: Date = new Date()) {
   const hasPlaceholders = placeholdersRegex.test(text);
   const nightWordRegex = /(夜|宵|今宵|今夜)/;
   const hasNightWord = nightWordRegex.test(text);
+  const meetingNumber = meetingMatch ? parseInt(meetingMatch[1], 10) : null;
+  const time = timeMatch
+    ? `${timeMatch[1]}:${timeMatch[2]}〜${timeMatch[3]}:${timeMatch[4]}`
+    : null;
+
   if (!dateMatch) {
     return {
       isValid: false,
       date: null,
       isSunday: false,
       hasHashtag,
-      meetingNumber: null,
-      hasTime: false,
-      hasValidLocation: false,
+      meetingNumber,
+      hasTime: timeMatch !== null,
+      hasValidLocation,
       hasPlaceholders,
       hasNightWord,
       extractedInfo: {
         date: null,
-        time: null,
-        worldName: null,
-        creator: null,
-        meetingNumber: null,
+        time,
+        worldName: location ? location.world : null,
+        creator: location ? location.creator : null,
+        meetingNumber: meetingNumber ? `第${meetingNumber}回` : null,
       },
     };
   }
-  const month = parseInt(dateMatch[1]);
-  const day = parseInt(dateMatch[2]);
+  const month = parseInt(dateMatch[1], 10);
+  const day = parseInt(dateMatch[2], 10);
   // Determine year dynamically: if the date has passed this year, assume next year
   const now = currentDate;
   const currentYear = now.getFullYear();
@@ -201,11 +207,11 @@ export function validateTweet(text: string, currentDate: Date = new Date()) {
     tweetYear = currentYear + 1;
   }
   const tweetDate = new Date(tweetYear, month - 1, day);
-  const isSunday = tweetDate.getDay() === 0;
-  const meetingNumber = meetingMatch ? parseInt(meetingMatch[1]) : null;
-  const time = timeMatch
-    ? `${timeMatch[1]}:${timeMatch[2]}〜${timeMatch[3]}:${timeMatch[4]}`
-    : null;
+  // 「4月31日」等の存在しない日付は Date コンストラクタが翌月へ繰り上げてしまうため、
+  // 繰り上げが起きていないか（= 入力どおりの月/日になっているか）を検証する。
+  const isRealCalendarDate =
+    tweetDate.getMonth() === month - 1 && tweetDate.getDate() === day;
+  const isSunday = isRealCalendarDate && tweetDate.getDay() === 0;
   return {
     isValid:
       isSunday &&
@@ -222,13 +228,32 @@ export function validateTweet(text: string, currentDate: Date = new Date()) {
     hasPlaceholders,
     hasNightWord,
     extractedInfo: {
-      date: dateMatch ? `${month}月${day}日(日)` : null,
+      date: `${month}月${day}日(日)`,
       time,
       worldName: location ? location.world : null,
       creator: location ? location.creator : null,
       meetingNumber: meetingNumber ? `第${meetingNumber}回` : null,
     },
   };
+}
+
+/**
+ * 入力中の内容がある状態でテンプレート生成を実行しようとしたとき、上書き確認ダイアログを出す。
+ * 内容が空ならダイアログなしで true を返す。
+ */
+function confirmOverwriteIfNeeded(
+  tweetText: string,
+  freeText: string,
+  worldName: string,
+  creatorName: string,
+): boolean {
+  const hasContent =
+    tweetText.trim() !== '' ||
+    freeText.trim() !== '' ||
+    worldName.trim() !== '' ||
+    creatorName.trim() !== '';
+  if (!hasContent) return true;
+  return window.confirm('現在の入力内容は上書きされます。続行しますか?');
 }
 
 export function useTweetState() {
@@ -382,12 +407,7 @@ export function useTweetState() {
   const referenceMeetingNumber = 253;
 
   // 今週（直近の日曜日）のスケジュールエントリを取得
-  const upcomingSunday = (() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    while (d.getDay() !== 0) d.setDate(d.getDate() + 1);
-    return d;
-  })();
+  const upcomingSunday = getUpcomingSunday();
   const thisWeekEntry = findEntryByDate(sheetSchedule, upcomingSunday);
 
   // 今週エントリのURLが変わるたびに VRChat API からワールド詳細を取得する。
@@ -414,25 +434,13 @@ export function useTweetState() {
 
   const generateThisWeeksSchedule = () => {
     if (
-      tweetText.trim() !== '' ||
-      freeText.trim() !== '' ||
-      worldName.trim() !== '' ||
-      creatorName.trim() !== ''
+      !confirmOverwriteIfNeeded(tweetText, freeText, worldName, creatorName)
     ) {
-      const confirmed = window.confirm(
-        '現在の入力内容は上書きされます。続行しますか?',
-      );
-      if (!confirmed) {
-        return;
-      }
+      return;
     }
     setIsLoadingSchedule(true);
     setTimeout(() => {
-      const today = new Date();
-      const upcomingSunday = new Date(today);
-      while (upcomingSunday.getDay() !== 0) {
-        upcomingSunday.setDate(upcomingSunday.getDate() + 1);
-      }
+      const upcomingSunday = getUpcomingSunday();
       const month = upcomingSunday.getMonth() + 1;
       const day = upcomingSunday.getDate();
 
@@ -477,17 +485,9 @@ export function useTweetState() {
 
   const generateScheduleAnnouncementTweet = () => {
     if (
-      tweetText.trim() !== '' ||
-      freeText.trim() !== '' ||
-      worldName.trim() !== '' ||
-      creatorName.trim() !== ''
+      !confirmOverwriteIfNeeded(tweetText, freeText, worldName, creatorName)
     ) {
-      const confirmed = window.confirm(
-        '現在の入力内容は上書きされます。続行しますか?',
-      );
-      if (!confirmed) {
-        return;
-      }
+      return;
     }
     const announcement = generateScheduleAnnouncement(sheetSchedule);
     if (!announcement) {
@@ -595,7 +595,6 @@ export function useTweetState() {
     setInstrumentEmoji,
     suffixEmoji,
     setSuffixEmoji,
-    structuredTemplate,
     worldUrl,
     setWorldUrl,
     includeWorldUrl,
