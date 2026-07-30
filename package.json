@@ -1,5 +1,5 @@
 {
-  "name": "vite-react-typescript-starter",
+  "name": "tweet-validator-for-achakai",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -8,6 +8,7 @@
     "build": "vite build",
     "lint": "biome check .",
     "format": "biome format .",
+    "typecheck": "tsc -b",
     "preview": "vite preview",
     "test": "vitest"
   },
@@ -19,6 +20,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.12",
+    "@types/node": "^26.1.2",
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^5.2.0",

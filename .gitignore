@@ -11,6 +11,7 @@ node_modules
 dist
 dist-ssr
 *.local
+*.tsbuildinfo
 
 # pnpm artifacts (project uses npm in CI / package-lock.json)
 .pnpm-store/

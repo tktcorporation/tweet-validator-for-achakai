@@ -6,10 +6,10 @@
       "!**/dist",
       "!**/node_modules",
       "!**/*.css",
-      "!.devcontainer/**",
-      "!.devenv/**",
+      "!.devcontainer",
+      "!.devenv",
       "!.devenv.json",
-      "!.claude/**"
+      "!.claude"
     ]
   },
   "formatter": {
@@ -22,7 +22,10 @@
     }
   },
   "linter": {
-    "enabled": false
+    "enabled": true,
+    "rules": {
+      "recommended": true
+    }
   },
   "assist": {
     "enabled": false
