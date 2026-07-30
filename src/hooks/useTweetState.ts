@@ -163,13 +163,16 @@ export function buildStructuredTweet(
 }
 
 // Dates when the event is skipped (holidays)
+// ISO文字列 new Date('YYYY-MM-DD') はUTC 0時としてパースされ、JSTでは9時になる。
+// getUpcomingSunday 等のローカル0時基準の値と比較する際にズレるため、
+// ローカル日付として明示的に構築する。
 export const skippedDates = [
-  new Date('2025-12-28'),
-  new Date('2026-01-04'),
-  new Date('2026-01-25'),
-  new Date('2026-02-22'),
-  new Date('2026-03-08'),
-  new Date('2026-04-26'), // リアルあ茶会の日
+  new Date(2025, 11, 28),
+  new Date(2026, 0, 4),
+  new Date(2026, 0, 25),
+  new Date(2026, 1, 22),
+  new Date(2026, 2, 8),
+  new Date(2026, 3, 26), // リアルあ茶会の日
 ];
 
 export function validateTweet(text: string, currentDate: Date = new Date()) {
@@ -419,7 +422,7 @@ export function useTweetState() {
     includeWorldUrl,
   ]);
 
-  const referenceDate = new Date('2025-12-21');
+  const referenceDate = new Date(2025, 11, 21);
   const referenceMeetingNumber = 253;
 
   // 今週（直近の日曜日）のスケジュールエントリを取得

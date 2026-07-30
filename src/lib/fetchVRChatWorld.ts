@@ -44,6 +44,10 @@ export async function fetchVRChatWorldInfo(
     if (!res.ok) return null;
     const data: unknown = await res.json();
     if (!data || typeof data !== 'object') return null;
+    // ここは fetchGroupInstances.ts と違い Zod を使わず手書きの型ガードにしている。
+    // fetchGroupInstances.ts は Node スクリプト専用で zod はブラウザバンドルに乗らないが、
+    // この関数はブラウザから呼ばれる（useTweetState.ts 経由）ため、1フィールドの検証の
+    // ために zod をバンドルへ追加するコストに見合わない。
     const obj = data as Record<string, unknown>;
     // "description" キーが存在するのに文字列でない場合は VRChat 側のレスポンス形状が
     // 変わった可能性が高い（キー自体が無いケースとは区別してコンソールに残す）。

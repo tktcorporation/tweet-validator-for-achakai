@@ -7,6 +7,7 @@ import {
   validateTweet,
   countTweetLength,
 } from './useTweetState';
+import { DEFAULT_EVENT_TIME } from '../lib/tweetTemplate';
 
 const template = [
   '自由文 #あ茶会',
@@ -344,6 +345,14 @@ describe('validateTweet', () => {
     const result = validateTweet(tweet, currentDate);
     expect(result.isSunday).toBe(false);
     expect(result.isValid).toBe(false);
+  });
+
+  it('recognizes DEFAULT_EVENT_TIME as a valid hasTime match (tweetTemplate.ts と validateTweet の非対称性の固定用)', () => {
+    const tweet = `テスト #あ茶会\n\n第254回 🎸題名のないお茶会🏘️\n【日時】12月21日(日) ${DEFAULT_EVENT_TIME}\n【場所】TestWorld By Creator\n【参加方法】Group＋「題名のないお茶会」にjoin`;
+    const currentDate = new Date('2025-12-20');
+    const result = validateTweet(tweet, currentDate);
+    expect(result.hasTime).toBe(true);
+    expect(result.isValid).toBe(true);
   });
 
   describe('year calculation', () => {
