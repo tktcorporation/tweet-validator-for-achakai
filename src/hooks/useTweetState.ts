@@ -256,10 +256,7 @@ export function validateTweet(text: string, currentDate: Date = new Date()) {
   };
 }
 
-/**
- * 入力中の内容がある状態でテンプレート生成を実行しようとしたとき、上書き確認ダイアログを出す。
- * 内容が空ならダイアログなしで true を返す。
- */
+/** 戻り値 true は「続行してよい」（内容が空、またはユーザーが上書きを承認した）ことを表す */
 function confirmOverwriteIfNeeded(
   tweetText: string,
   freeText: string,

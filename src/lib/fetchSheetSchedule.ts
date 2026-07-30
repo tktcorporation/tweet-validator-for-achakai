@@ -3,6 +3,11 @@ import { DEFAULT_EVENT_TIME, HASHTAG } from './tweetTemplate';
 const SPREADSHEET_ID = '1ZVTxdMsSbfTX_0RCDajiR2VeDWETeabBUnNhyd4IYrg';
 const SCHEDULE_SHEET_GID = '342034787';
 
+// シートの行ヘッダー文言。CSVレスポンスの妥当性チェックと行抽出の両方が
+// 同じ文言を参照する必要があるため定数化する。
+const HEADER_DATE = '開催予定日';
+const HEADER_MEETING = '開催回数';
+
 export interface ScheduleEntry {
   date: string;
   meetingNumber: number | null;
@@ -26,14 +31,14 @@ export async function fetchScheduleFromSheet(): Promise<ScheduleEntry[]> {
   // 共有設定変更等でCSVではないレスポンス（権限エラーページ等）が200で返ることがある。
   // ヘッダー行が見つからない場合は「予定0件」ではなく異常として扱う。
   const hasHeaders =
-    rows.some((r) => r[0]?.trim() === '開催予定日') &&
-    rows.some((r) => r[0]?.trim() === '開催回数');
+    rows.some((r) => r[0]?.trim() === HEADER_DATE) &&
+    rows.some((r) => r[0]?.trim() === HEADER_MEETING);
   if (!hasHeaders) {
     throw new Error(
       'スプレッドシートの形式が想定と異なります（ヘッダー行が見つかりません）',
     );
   }
-  return parseScheduleCSV(csv);
+  return parseScheduleRows(rows);
 }
 
 /** Parse CSV text handling quoted fields and multiline values */
@@ -99,12 +104,15 @@ function toHalfWidthDigits(s: string): string {
 }
 
 export function parseScheduleCSV(csv: string): ScheduleEntry[] {
-  const rows = parseCSV(csv);
+  return parseScheduleRows(parseCSV(csv));
+}
 
+/** 既にパース済みの行に対してスケジュールエントリを抽出する（fetchScheduleFromSheet が CSV を二重にパースしないための分離） */
+function parseScheduleRows(rows: string[][]): ScheduleEntry[] {
   const findRow = (header: string) => rows.find((r) => r[0]?.trim() === header);
 
-  const dateRow = findRow('開催予定日');
-  const meetingRow = findRow('開催回数');
+  const dateRow = findRow(HEADER_DATE);
+  const meetingRow = findRow(HEADER_MEETING);
   const worldRow = findRow('ワールド名');
   const creatorRow = findRow('作者');
   // スプレッドシートの確定チェックボックス行（"TRUE" / "FALSE"）
@@ -147,13 +155,13 @@ export function formatDateForSheet(date: Date): string {
   return `${y}/${m}/${d}`;
 }
 
-/** "YYYY/MM/DD" 形式のシート日付文字列を Date に変換する（formatDateForSheet の逆変換） */
+/** formatDateForSheet と対になる変換。フォーマットを変える場合は両方を更新すること */
 export function parseSheetDate(dateStr: string): Date {
   const [y, m, d] = dateStr.split('/').map(Number);
   return new Date(y, m - 1, d);
 }
 
-/** 直近の日曜日（currentDate が日曜ならその日）を返す。時刻は 00:00:00 に正規化される。 */
+/** 「今週」の定義を呼び出し元間で統一するための共通実装 */
 export function getUpcomingSunday(currentDate: Date = new Date()): Date {
   const d = new Date(currentDate);
   d.setHours(0, 0, 0, 0);

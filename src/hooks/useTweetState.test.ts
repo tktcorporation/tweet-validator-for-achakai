@@ -272,14 +272,18 @@ describe('validateTweet', () => {
     expect(result.isValid).toBe(false);
   });
 
-  it('computes hasValidLocation correctly even when no date is found', () => {
+  it('computes hasValidLocation, hasTime, and meetingNumber correctly even when no date is found', () => {
     const tweet =
-      'テスト #あ茶会\n\n第254回 🎸題名のないお茶会🏘️\n【場所】MyWorld By Creator\n【参加方法】Group＋「題名のないお茶会」にjoin';
+      'テスト #あ茶会\n\n第254回 🎸題名のないお茶会🏘️\n【日時】14:30〜16:00\n【場所】MyWorld By Creator\n【参加方法】Group＋「題名のないお茶会」にjoin';
     const result = validateTweet(tweet);
     expect(result.date).toBeNull();
     expect(result.hasValidLocation).toBe(true);
+    expect(result.hasTime).toBe(true);
+    expect(result.meetingNumber).toBe(254);
     expect(result.extractedInfo.worldName).toBe('MyWorld');
     expect(result.extractedInfo.creator).toBe('Creator');
+    expect(result.extractedInfo.time).toBe('14:30〜16:00');
+    expect(result.extractedInfo.meetingNumber).toBe('第254回');
     expect(result.isValid).toBe(false);
   });
 
@@ -316,6 +320,27 @@ describe('validateTweet', () => {
     const tweet =
       'テスト #あ茶会\n\n第254回 🎸題名のないお茶会🏘️\n【日時】2月29日(日) 14:30〜16:00\n【場所】TestWorld By Creator\n【参加方法】Group＋「題名のないお茶会」にjoin';
     const currentDate = new Date('2026-02-01');
+    const result = validateTweet(tweet, currentDate);
+    expect(result.isSunday).toBe(false);
+    expect(result.isValid).toBe(false);
+  });
+
+  it('is invalid for the non-existent "4月31日" date (4月は30日まで)', () => {
+    const tweet =
+      'テスト #あ茶会\n\n第254回 🎸題名のないお茶会🏘️\n【日時】4月31日(日) 14:30〜16:00\n【場所】TestWorld By Creator\n【参加方法】Group＋「題名のないお茶会」にjoin';
+    const currentDate = new Date('2026-04-01');
+    const result = validateTweet(tweet, currentDate);
+    expect(result.isSunday).toBe(false);
+    expect(result.isValid).toBe(false);
+  });
+
+  it('is invalid when the month does not exist, even though the rolled-over date lands on a Sunday', () => {
+    // 13月は存在しない。Dateコンストラクタは "13月3日" を2027年1月3日へ繰り上げるが、
+    // この日は実際に日曜日なので、day成分だけを見る判定だと素通りしてしまう
+    // （month成分のチェックが独立して効いていることをここで確認する）。
+    const tweet =
+      'テスト #あ茶会\n\n第254回 🎸題名のないお茶会🏘️\n【日時】13月3日(日) 14:30〜16:00\n【場所】TestWorld By Creator\n【参加方法】Group＋「題名のないお茶会」にjoin';
+    const currentDate = new Date('2026-01-05');
     const result = validateTweet(tweet, currentDate);
     expect(result.isSunday).toBe(false);
     expect(result.isValid).toBe(false);

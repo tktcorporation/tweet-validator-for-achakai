@@ -43,4 +43,7 @@ async function main() {
   console.log('Discord に通知を送信しました');
 }
 
-main();
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

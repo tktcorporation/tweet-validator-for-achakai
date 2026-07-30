@@ -2,15 +2,13 @@
  * VRChat API からワールド情報を取得するユーティリティ。
  *
  * 背景: スプレッドシートのURL欄に記録された VRChat ワールドURLから
- * ワールドの説明文・サムネイル等を取得し、画面に表示する。
+ * ワールドの説明文を取得し、画面に表示する。
  * ブラウザから VRChat API を直接叩くと CORS と UA 要件で失敗するため、
  * 同一オリジンの Netlify Function (netlify/functions/vrchat-world.ts) 経由で呼ぶ。
  * 取得に失敗した場合は null を返し、呼び出し元はシート記載の説明にフォールバックする。
  */
 
 export interface VRChatWorldInfo {
-  /** ワールド名（スプレッドシートの値と一致確認用） */
-  name: string;
   /** ワールドの説明文 */
   description: string;
 }
@@ -47,8 +45,15 @@ export async function fetchVRChatWorldInfo(
     const data: unknown = await res.json();
     if (!data || typeof data !== 'object') return null;
     const obj = data as Record<string, unknown>;
+    // "description" キーが存在するのに文字列でない場合は VRChat 側のレスポンス形状が
+    // 変わった可能性が高い（キー自体が無いケースとは区別してコンソールに残す）。
+    if ('description' in obj && typeof obj.description !== 'string') {
+      console.warn(
+        '[fetchVRChatWorldInfo] unexpected type for "description" field',
+        obj.description,
+      );
+    }
     return {
-      name: typeof obj.name === 'string' ? obj.name : '',
       description: typeof obj.description === 'string' ? obj.description : '',
     };
   } catch {

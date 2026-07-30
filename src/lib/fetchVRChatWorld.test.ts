@@ -57,22 +57,34 @@ describe('fetchVRChatWorldInfo', () => {
       expect.any(Object),
     );
     expect(info).toEqual({
-      name: 'Test World',
       description: 'desc',
     });
   });
 
-  it('レスポンスの型が不正なフィールドは空文字にフォールバックする', async () => {
+  it('description の型が不正な場合は空文字にフォールバックし警告を出す', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const mockFetch = vi.mocked(globalThis.fetch);
     mockFetch.mockResolvedValueOnce(
-      new Response(JSON.stringify({ name: 123, description: null }), {
-        status: 200,
-      }),
+      new Response(JSON.stringify({ description: null }), { status: 200 }),
     );
     expect(await fetchVRChatWorldInfo('wrld_abc')).toEqual({
-      name: '',
       description: '',
     });
+    expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
+  it('description キー自体が無い場合は空文字にフォールバックし警告は出さない', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const mockFetch = vi.mocked(globalThis.fetch);
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ name: 'Test World' }), { status: 200 }),
+    );
+    expect(await fetchVRChatWorldInfo('wrld_abc')).toEqual({
+      description: '',
+    });
+    expect(warnSpy).not.toHaveBeenCalled();
+    warnSpy.mockRestore();
   });
 
   it('Function が非 2xx を返したら null', async () => {
