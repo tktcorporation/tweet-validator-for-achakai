@@ -186,7 +186,7 @@ export function deriveSkippedDates(entries: ScheduleEntry[]): Date[] {
 }
 
 /**
- * 水曜日の Discord 週次通知用メッセージを生成する。
+ * 火曜日の Discord 週次通知用メッセージを生成する。
  * currentDate から直近の日曜を求め、該当エントリの状態に応じてメッセージを返す。
  *
  * 呼び出し元: scripts/discord-weekly-notify.ts (GitHub Actions から実行)
