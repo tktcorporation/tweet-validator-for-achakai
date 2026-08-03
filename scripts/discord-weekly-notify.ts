@@ -1,7 +1,7 @@
 /**
  * Discord 週次お茶会通知スクリプト。
  *
- * 背景: 毎週水曜20時(JST)に今週の日曜のお茶会予定を Discord に通知する。
+ * 背景: 毎週火曜20時(JST)に今週の日曜のお茶会予定を Discord に通知する。
  * スプレッドシートの確定チェック状態に応じてメッセージを出し分ける。
  *
  * 実行方法: npx tsx scripts/discord-weekly-notify.ts
