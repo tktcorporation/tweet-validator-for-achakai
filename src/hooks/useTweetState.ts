@@ -28,11 +28,25 @@ const STORAGE_KEY = 'tweet-state';
 export const instrumentEmojiArray =
   '🎸 🎹 🥁 🎺 🎻 🎷 🪕 🪗 🎤 🎧 📯 🪘 🎼'.split(' ');
 
+/**
+ * X (Twitter) は投稿中のURLを t.co 経由で全て固定長に短縮するため、
+ * URL部分は実際の文字数ではなくこの固定値でカウントされる
+ * （元のURLがこれより短くても23として数えられる）。
+ */
+const SHORTENED_URL_LENGTH = 23;
+
 export function countTweetLength(text: string): number {
   const wideChar =
     /[\u1100-\u115F\u2329\u232A\u2E80-\uA4CF\uAC00-\uD7A3\uF900-\uFAFF\uFE10-\uFE19\uFE30-\uFE6F\uFF00-\uFF60\uFFE0-\uFFE6]/u;
-  let count = 0;
-  for (const ch of [...text]) {
+  // URLに使われうるASCII文字だけにマッチさせる。\S+ だと空白なしで
+  // 後続する日本語（例: 「https://example.comをご覧ください」の「をご覧ください」）
+  // までURLとして飲み込んでしまい、本来カウントすべき文字が消える。
+  const urlPattern = /https?:\/\/[\w\-._~:/?#[\]@!$&'()*+,;=%]+/g;
+  const urls = text.match(urlPattern) ?? [];
+  const textWithoutUrls = text.replace(urlPattern, '');
+
+  let count = urls.length * SHORTENED_URL_LENGTH;
+  for (const ch of [...textWithoutUrls]) {
     count += wideChar.test(ch) ? 2 : 1;
   }
   return count;

@@ -77,6 +77,38 @@ describe('countTweetLength', () => {
   it('returns 0 for an empty string', () => {
     expect(countTweetLength('')).toBe(0);
   });
+
+  it('counts a short URL as the fixed t.co length of 23', () => {
+    expect(countTweetLength('https://t.co/a')).toBe(23);
+  });
+
+  it('counts a long URL as the fixed t.co length of 23', () => {
+    const longUrl =
+      'https://example.com/very/long/path/that/exceeds/twenty-three/characters';
+    expect(countTweetLength(longUrl)).toBe(23);
+  });
+
+  it('counts an http (non-https) URL as the fixed t.co length of 23', () => {
+    expect(countTweetLength('http://example.com')).toBe(23);
+  });
+
+  it('counts a URL at the end of the tweet together with the preceding text', () => {
+    const text = '本文\n\nhttps://vrchat.com/home/world/wrld_1234';
+    // 「本文」(2 * 2) + 改行2文字 (1 * 2) + URL固定長23
+    expect(countTweetLength(text)).toBe(4 + 2 + 23);
+  });
+
+  it('counts each URL separately when multiple URLs are present', () => {
+    const text = 'https://example.com/one https://example.com/two';
+    // URL x2 (23 * 2) + 区切りの半角スペース1文字
+    expect(countTweetLength(text)).toBe(23 * 2 + 1);
+  });
+
+  it('does not swallow Japanese text directly following a URL with no space', () => {
+    const text = '詳細はhttps://example.comをご覧ください';
+    // 「詳細は」(3 * 2) + URL固定長23 + 「をご覧ください」(7 * 2)
+    expect(countTweetLength(text)).toBe(6 + 23 + 14);
+  });
 });
 
 describe('buildStructuredTweet', () => {
