@@ -1,0 +1,28 @@
+name: Discord SNS Reminder Notify
+
+on:
+  schedule:
+    # 毎週水曜 21:00 JST (= 12:00 UTC)
+    - cron: '0 12 * * 3'
+  workflow_dispatch:
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npx vitest run
+
+      - name: Send Discord notification
+        run: npx tsx scripts/discord-sns-reminder-notify.ts
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
