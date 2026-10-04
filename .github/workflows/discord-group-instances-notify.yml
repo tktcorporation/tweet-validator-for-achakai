@@ -1,9 +1,6 @@
 name: Discord Group Instances Notify
 
 on:
-  schedule:
-    # 毎週日曜 15:45 JST (= 06:45 UTC)
-    - cron: '45 6 * * 0'
   workflow_dispatch:
     inputs:
       group_id:
@@ -13,6 +10,8 @@ on:
 
 jobs:
   notify:
+    # この通知は利用していないため、手動実行でも送信しない。
+    if: ${{ false }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -32,7 +31,7 @@ jobs:
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           VRCHAT_USER_ID: ${{ secrets.VRCHAT_USER_ID }}
-          # schedule 実行時は inputs が未定義のため secret にフォールバック
+          # group_id が空なら secret にフォールバック
           VRCHAT_GROUP_ID: ${{ inputs.group_id || secrets.VRCHAT_GROUP_ID }}
           VRCHAT_AUTH_COOKIE: ${{ secrets.VRCHAT_AUTH_COOKIE }}
           # 任意。auth Cookie 単独だと Cookie 取得元と runner の IP が離れる環境で
