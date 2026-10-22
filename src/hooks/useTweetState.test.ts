@@ -6,6 +6,7 @@ import {
   extractTrailingWorldUrl,
   validateTweet,
   countTweetLength,
+  instrumentEmojiArray,
 } from './useTweetState';
 import { DEFAULT_EVENT_TIME } from '../lib/tweetTemplate';
 
@@ -17,6 +18,55 @@ const template = [
   '【場所】ワールド名 By クリエイター名',
   '【参加方法】Group＋「題名のないお茶会」にjoin',
 ];
+
+describe('instrument emoji options', () => {
+  const addedOptions = [
+    '🪇',
+    '🪊',
+    '🪉',
+    '🪈',
+    '🔔',
+    '🎐',
+    '🛎️',
+    '🐚',
+    '🎙️',
+    '🎚️',
+    '🎛️',
+    '📻',
+    '🎵',
+    '🎶',
+  ];
+
+  it('offers 27 distinct options without selector variants', () => {
+    expect(instrumentEmojiArray).toHaveLength(27);
+    for (const emoji of addedOptions) {
+      expect(instrumentEmojiArray).toContain(emoji);
+    }
+    expect(
+      new Set(instrumentEmojiArray.map((emoji) => emoji.replace(/\uFE0F/g, '')))
+        .size,
+    ).toBe(instrumentEmojiArray.length);
+  });
+
+  it.each(
+    addedOptions,
+  )('generates, parses, and validates a tweet with %s', (emoji) => {
+    const tweet = buildStructuredTweet(
+      template,
+      'テスト',
+      'TestWorld',
+      'Creator',
+      emoji,
+      emoji,
+    ).replace('1月1日(日)', '1月11日(日)');
+
+    expect(tweet).toContain(`第210回 ${emoji}題名のないお茶会${emoji}`);
+    const parsed = parseStructuredFields(tweet);
+    expect(parsed?.instrument).toBe(emoji);
+    expect(parsed?.suffix).toBe(emoji);
+    expect(validateTweet(tweet, new Date('2026-01-10')).isValid).toBe(true);
+  });
+});
 
 describe('parseStructuredFields', () => {
   it('extracts instrument emoji', () => {
