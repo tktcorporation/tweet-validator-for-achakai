@@ -26,7 +26,7 @@ import {
 const STORAGE_KEY = 'tweet-state';
 
 export const instrumentEmojiArray =
-  '🎸 🎹 🥁 🎺 🎻 🎷 🪕 🪗 🎤 🎧 📯 🪘 🎼'.split(' ');
+  '🎸 🎹 🥁 🪇 🎺 🪊 🎻 🪉 🎷 🪈 🪕 🪗 🎤 🎧 📯 🪘 🎼'.split(' ');
 
 /**
  * X (Twitter) は投稿中のURLを t.co 経由で全て固定長に短縮するため、
