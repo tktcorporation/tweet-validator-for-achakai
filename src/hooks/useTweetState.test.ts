@@ -20,19 +20,36 @@ const template = [
 ];
 
 describe('instrument emoji options', () => {
-  const addedInstruments = ['🪇', '🪊', '🪉', '🪈'];
+  const addedOptions = [
+    '🪇',
+    '🪊',
+    '🪉',
+    '🪈',
+    '🔔',
+    '🎐',
+    '🛎️',
+    '🐚',
+    '🎙️',
+    '🎚️',
+    '🎛️',
+    '📻',
+    '🎵',
+    '🎶',
+  ];
 
-  it('offers the new instruments without duplicate options', () => {
-    for (const emoji of addedInstruments) {
+  it('offers 27 distinct options without selector variants', () => {
+    expect(instrumentEmojiArray).toHaveLength(27);
+    for (const emoji of addedOptions) {
       expect(instrumentEmojiArray).toContain(emoji);
     }
-    expect(new Set(instrumentEmojiArray).size).toBe(
-      instrumentEmojiArray.length,
-    );
+    expect(
+      new Set(instrumentEmojiArray.map((emoji) => emoji.replace(/\uFE0F/g, '')))
+        .size,
+    ).toBe(instrumentEmojiArray.length);
   });
 
   it.each(
-    addedInstruments,
+    addedOptions,
   )('generates, parses, and validates a tweet with %s', (emoji) => {
     const tweet = buildStructuredTweet(
       template,
@@ -40,11 +57,13 @@ describe('instrument emoji options', () => {
       'TestWorld',
       'Creator',
       emoji,
-      '🏘️',
+      emoji,
     ).replace('1月1日(日)', '1月11日(日)');
 
-    expect(tweet).toContain(`第210回 ${emoji}題名のないお茶会🏘️`);
-    expect(parseStructuredFields(tweet)?.instrument).toBe(emoji);
+    expect(tweet).toContain(`第210回 ${emoji}題名のないお茶会${emoji}`);
+    const parsed = parseStructuredFields(tweet);
+    expect(parsed?.instrument).toBe(emoji);
+    expect(parsed?.suffix).toBe(emoji);
     expect(validateTweet(tweet, new Date('2026-01-10')).isValid).toBe(true);
   });
 });
